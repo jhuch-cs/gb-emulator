@@ -13,6 +13,7 @@ public:
 
 private:
   // Array of size 0x10000 (Addresses 0x0 - 0xFFFF)
+  // Some access rules: https://gbdev.io/pandocs/Memory_Map.html
   u8* memory; 
 
 };

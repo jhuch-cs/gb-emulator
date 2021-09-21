@@ -18,6 +18,7 @@ public:
   void step();
 
   // probably a lot of other public interface stuff that you'll discover in implementation
+  // See https://gbdev.io/pandocs/Rendering.html
     
 private:
   CPU cpu;

@@ -16,7 +16,8 @@ public:
   // Registers
 
   // Registers are sometimes combined into 16-bit registers. First register is the high-byte.
-  // `f` is the flag register for zero, overflow, negative flags
+  // `f` is the flag register for zero, subtraction, half-carry, full-carry flags
+  // https://gbdev.io/pandocs/CPU_Registers_and_Flags.html
   u16 af, bc, de, hl;
 
   // Special Registers
@@ -37,5 +38,6 @@ public:
 
 
   // TODO: Like 200 op-codes and stack management functions, too
+  // Op codes: pg. 65, http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf
 };
 
