@@ -15,7 +15,8 @@ class PPU {
 public:
   PPU(CPU& cpu, MMU& mmu);
 
-  void step();
+  // Return the frame buffer so SDL can render it
+  u8* step();
 
   // probably a lot of other public interface stuff that you'll discover in implementation
   // See https://gbdev.io/pandocs/Rendering.html
@@ -25,8 +26,8 @@ private:
   MMU mmu;
   Mode mode;
 
-  // 160 x 144
-  u8* frameBuffer;
+  // 160 x 144 x 3 (last dimenstion is pixel, rgb)
+  static u8* frameBuffer;
 
   // 256 x 256
   u8* backgroundMap;
