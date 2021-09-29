@@ -40,6 +40,8 @@ int main(int argc, char* argv[]) {
   // TODO: Then we're going to apply that surface to the SDL_Window's surface
   // window->surface = pixelSurface
 
+  // (An alternative is to use SDL textures, as discussed over Zoom)
+
   /*
     for (int i = 0; i < 144; i++) {
         for (int j = 0; j < 160; j++) {

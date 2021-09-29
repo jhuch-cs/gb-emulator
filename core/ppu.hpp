@@ -15,8 +15,12 @@ class PPU {
 public:
   PPU(CPU& cpu, MMU& mmu);
 
-  // Return the frame buffer so SDL can render it
-  u8* step();
+  // Allow the PPU to cycle `cpuCyclesElapsed / 2` times per call
+  void step(u8 cpuCyclesElapsed);
+
+  // This is pulled out into a method, instead of public field access, so you only
+  // have to update the buffer when SDL asks for it
+  u8* getFrameBuffer();
 
   // probably a lot of other public interface stuff that you'll discover in implementation
   // See https://gbdev.io/pandocs/Rendering.html

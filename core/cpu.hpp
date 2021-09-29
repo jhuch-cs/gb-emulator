@@ -6,9 +6,20 @@
 class CPU {
 public: 
   CPU(MMU& mmu);
-        
-  void step();
-  void exec(u8 opcode);
+  
+  // Ultimately, `step()` should return the number of cycles required to completely execute the op code
+  // that we processed this step. But timing is not mission critical at the moment, so you can just 
+  // hard-code 4 as the return value for now. 
+  // When the time comes, https://www.pastraiser.com/cpu/gameboy/gameboy_opcodes.html is a great quick reference,
+  // and it lists the number of cycles required. Note that some resources use 'machine cycles' which is using the 
+  // CPU's 4Mhz clock as a reference and some use cycles based on the MMU's 1MHz clock. For our purposes, 
+  // we're using cycles based the MMU's lower clock (which is what the above link uses), so some instructions take as many
+  // as 24 cycles to complete
+  u8 step();
+
+  u8 exec(u8 opcode);
+
+  void loadBootRom(u8* bootRomLocation);
 
  private:
   MMU mmu;

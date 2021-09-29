@@ -1,1 +1,1 @@
-gcc -std=c17 main.c -lSDL2main -lSDL2 -o gb-emulator
+gcc -std=c++17 main.cpp -lSDL2main -lSDL2 -o gb-emulator
