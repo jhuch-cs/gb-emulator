@@ -23,6 +23,14 @@ public:
 
  private:
   MMU mmu;
+  u8* bootRomLocation;
+  uint16_t AF;
+  uint16_t BC;
+  uint16_t DE;
+  uint16_t HL;
+  uint16_t SP;
+  uint16_t PC;
+
 
   // Registers
 
