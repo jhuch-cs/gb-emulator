@@ -18,8 +18,8 @@ CPU::CPU(MMU& mmu, u8* bootRomLocation){
 }
 
 u8 CPU::step(){
-    //not sure when we need to call this. Do CPU call this in its exec function to increase the ProgramCounter?
-    return NULL;
+    //not sure how we should calulcate cycles right now, should be fine if it temporarily just returns 1 I suppose
+    return 1;
 }
 
 u8 CPU::exec(){
