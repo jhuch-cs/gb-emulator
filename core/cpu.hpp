@@ -24,23 +24,6 @@ public:
  private:
   MMU mmu;
   u16* bootRomLocation;
-  
-  //We'll have to figure out how to structure the registers so we can easily access one or both at the same time
-  u16 AF;
-  u16 BC;
-  u16 DE;
-  u16 HL;
-  u16 SP;
-  u16 PC;
-  u8 A;
-  u8 B;
-  u8 C;
-  u8 D;
-  u8 E;
-  u8 H;
-  u8 L;
-
-
   // Registers
 
   // Registers are sometimes combined into 16-bit registers. First register is the high-byte.

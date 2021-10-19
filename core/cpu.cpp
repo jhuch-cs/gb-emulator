@@ -3,30 +3,21 @@
 #include "./util.hpp"
 #include "cpu.hpp"
 
-//set all register locations and Program counter variables up here
-//This register setup won't work right now, but it's just so we can easily write the functions for the opcodes
-//We'll have to figure out how to structure the registers so we can easily access one or both at the same time
-u16 AF;
-u16 BC;
-u16 DE;
-u16 HL;
-u16 SP;
-u8 A;
-u8 B;
-u8 C;
-u8 D;
-u8 E;
-u8 H;
-u8 L;
+//set all register locations and Program counter variables up here I think
 
-u16 PC;
-//Not sure what to set all the register locations to, where can we find that?
+//flags in AF register
+const u8 zero_flag_z = 0x80; //it's the 7th bit
+const u8 subtraction_flag_n = 0x40; //it's the 6th bit
+const u8 half_carry_flag_h = 0x20; //it's the 5th bit
+const u8 carry_flag_c = 0x10; //it's the 4th bit
+
+
 
 CPU::CPU(MMU& mmu, u16* bootRomLocation){
     this->mmu = mmu;
     
-    //setting the PC to start where the boot rom is located
-    this->PC = *bootRomLocation;
+    //setting the pc to start where the boot rom is located
+    this->pc = *bootRomLocation;
 }
 
 u8 CPU::step(){
@@ -39,92 +30,105 @@ u8 CPU::exec(){
     //idk if the loop just needs to go. I assume there's no reason to end the loop
     while(1){
         //read code from wherever program counter is at
-        //increment the program counter so next time we call it we get the next opcode
-        //Anytime the program counter is used to read, it needs to be incremented, such as when reading input for an opcode
-        u8 opCode = mmu.read(PC++);
+        //increment the program counter so next time we call it we get the next opCode
+        //Anytime the program counter is used to read, it needs to be incremented, such as when reading input for an opCode
+        u8 opCode = mmu.read(pc++);
         
 
         //There are currently only switch statements for opCodes that a required for booting
         switch(opCode){
             case 0x86:
                 //ADD A,(HL)
-                u8 addressAtHL = mmu.read(HL);
-                A += mmu.read(addressAtHL);
+                u8 address_hl = mmu.read(hl);
+                /***********a += mmu.read(address_hl);**********/
                 break;
 
             case 0xCD:
                 //CALL a16
-                SP--;
-                SP--;
-                u16 addressAtSP = mmu.read16Bit(SP);
-                mmu.write(addressAtSP, PC);
+                sp--;
+                sp--;
+                u16 address_sp = mmu.read16Bit(sp);
+                mmu.write(address_sp, pc);
 
-                u16 nn = mmu.read16Bit(PC++);
-                PC = nn;
+                u16 nn = mmu.read16Bit(pc++);
+                pc = nn;
                 break;
 
             case 0xFE:
                 //CP d8
                 //CP is a subtraction from A that doesn't update A, only the flags it would have set/reset if it really was subtracted.
-                u8 n = mmu.read(PC++);
-                u8 compare = A - n;
-                //how/what flags do we set/reset here
+                u8 n = mmu.read(pc++);
+                /*********u8 compare = a - n;************/
+                //set subtraction flag
+                /********if (compare < 0){
+                    //set carry flag
+                }
+                else if(compare == 0){
+                    //set zero flag
+                }*********/
+                //need to look up when to set half cary flag
                 break;
             case 0xBE:
                 //CP (HL)
                 //CP is a subtraction from A that doesn't update A, only the flags it would have set/reset if it really was subtracted.
-                u8 valueAtHL = mmu.read(HL);
-                u8 compare = A - valueAtHL;
+                u8 valueAtHL = mmu.read(hl);
+                /**********u8 compare = a - valueAtHL;***********/
                 //how/what flags do we set/reset here
                 break;
 
             case 0x3D:
                 //DEC A
-                A--;
+                //a--;
                 break;
             case 0x05:
                 //DEC B
-                B--;
+                //b--;
                 break;
             case 0x0D:
                 //DEC C
-                C--;
+                //c--;
                 break;
             case 0x15:
                 //DEC D
-                D--;
+                //d--;
                 break;
             case 0x1D:
                 //DEC E
-                E--;
+                //e--;
                 break;
 
             case 0x04:
                 //INC B
-                B++;
+                //b++;
                 break;
             case 0x0C:
                 //INC C
-                C++;
+                //c++;
                 break;
             case 0x13:
                 //INC DE
-                DE++;
+                de++;
                 break;
             case 0x24:
                 //INC H
-                H++;
+                //h++;
                 break;
             case 0x23:
                 //INC HL
-                HL++;
+                hl++;
                 break;
             
             case 0x20:
                 //JR NZ,r8
+                /********if ((subtraction_flag_n & f) && (zero_flag_z & f)){
+                    //execute jump
+                }*********/
                 break;
             case 0x28:
                 //JR Z,r8
+                /*****if (zero_flag_z & f){
+                    //execute jump
+                }******/
                 break;
             case 0x18:
                 //JR r8
@@ -242,7 +246,30 @@ u8 CPU::exec(){
     }
     
     //Something called Prefixed ($CB $xx) also had two op codes needed for booting
-    //Don't know what the prefixed stuff means, it's found here, it's the second table https://gbdev.io/gb-opcodes/optables/
+    //Don't know what the prefixed stuff means, it's found here, it's the second table https://gbdev.io/gb-opCodes/optables/
     //The needed op codes here are for BIT 7,H which is 0x7C, and RL C which is 0x11
+}
+
+// Helpers
+u8 CPU::getHighByte(u16 value){
+    
+}
+u8 CPU::getLowByte(u16 value){
+
+}
+
+u8 CPU::setHighByte(u16* destination, u8 value){
+
+}
+u8 CPU::setLowByte(u16* destination, u8 value){
+
+}
+
+// Map from the register code to the register value itself
+u8 CPU::get8BitRegister(u8 registerValue){
+
+}
+u16 CPU::get16BitRegister(u8 registerValue){
+
 }
 
