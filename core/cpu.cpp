@@ -39,59 +39,85 @@ u8 CPU::exec(){
     //idk if the loop just needs to go. I assume there's no reason to end the loop
     while(1){
         //read code from wherever program counter is at
-        u8 opCode = mmu.read(PC);
         //increment the program counter so next time we call it we get the next opcode
-        PC = PC++;
+        //Anytime the program counter is used to read, it needs to be incremented, such as when reading input for an opcode
+        u8 opCode = mmu.read(PC++);
         
 
         //There are currently only switch statements for opCodes that a required for booting
         switch(opCode){
             case 0x86:
                 //ADD A,(HL)
-                //memoryAddress = mmu.read(HL);
-                //register A += value at mmu.read(memoryAddress);
+                u8 addressAtHL = mmu.read(HL);
+                A += mmu.read(addressAtHL);
                 break;
 
             case 0xCD:
                 //CALL a16
+                SP--;
+                SP--;
+                u16 addressAtSP = mmu.read16Bit(SP);
+                mmu.write(addressAtSP, PC);
+
+                u16 nn = mmu.read16Bit(PC++);
+                PC = nn;
                 break;
 
             case 0xFE:
                 //CP d8
+                //CP is a subtraction from A that doesn't update A, only the flags it would have set/reset if it really was subtracted.
+                u8 n = mmu.read(PC++);
+                u8 compare = A - n;
+                //how/what flags do we set/reset here
                 break;
             case 0xBE:
                 //CP (HL)
+                //CP is a subtraction from A that doesn't update A, only the flags it would have set/reset if it really was subtracted.
+                u8 valueAtHL = mmu.read(HL);
+                u8 compare = A - valueAtHL;
+                //how/what flags do we set/reset here
                 break;
 
             case 0x3D:
                 //DEC A
+                A--;
                 break;
             case 0x05:
                 //DEC B
+                B--;
                 break;
             case 0x0D:
                 //DEC C
+                C--;
                 break;
             case 0x15:
                 //DEC D
+                D--;
                 break;
             case 0x1D:
                 //DEC E
+                E--;
+                break;
 
             case 0x04:
                 //INC B
+                B++;
                 break;
             case 0x0C:
                 //INC C
+                C++;
                 break;
             case 0x13:
                 //INC DE
+                DE++;
                 break;
             case 0x24:
                 //INC H
+                H++;
                 break;
             case 0x23:
                 //INC HL
+                HL++;
                 break;
             
             case 0x20:
