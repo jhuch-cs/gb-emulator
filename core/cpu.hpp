@@ -6,7 +6,7 @@
 class CPU {
 public: 
   // At construction time, `exec` the boot rom
-  CPU(MMU& mmu, u8* bootRomLocation);
+  CPU(MMU& mmu, u16* bootRomLocation);
   
   // Ultimately, `step()` should return the number of cycles required to completely execute the op code
   // that we processed this step. But timing is not mission critical at the moment, so you can just 
@@ -23,7 +23,7 @@ public:
 
  private:
   MMU mmu;
-  u8* bootRomLocation;
+  u16* bootRomLocation;
   uint16_t AF;
   uint16_t BC;
   uint16_t DE;
