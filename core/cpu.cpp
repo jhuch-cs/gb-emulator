@@ -4,13 +4,22 @@
 #include "cpu.hpp"
 
 //set all register locations and Program counter variables up here
-/* uint16_t AF;
-  uint16_t BC;
-  uint16_t DE;
-  uint16_t HL;
-  uint16_t SP;*/
+//This register setup won't work right now, but it's just so we can easily write the functions for the opcodes
+//We'll have to figure out how to structure the registers so we can easily access one or both at the same time
+u16 AF;
+u16 BC;
+u16 DE;
+u16 HL;
+u16 SP;
+u8 A;
+u8 B;
+u8 C;
+u8 D;
+u8 E;
+u8 H;
+u8 L;
 
-  u16 PC;
+u16 PC;
 //Not sure what to set all the register locations to, where can we find that?
 
 CPU::CPU(MMU& mmu, u16* bootRomLocation){
@@ -30,13 +39,17 @@ u8 CPU::exec(){
     //idk if the loop just needs to go. I assume there's no reason to end the loop
     while(1){
         //read code from wherever program counter is at
+        u8 opCode = mmu.read(PC);
         //increment the program counter so next time we call it we get the next opcode
-        u8 opCode = mmu.read(PC++);
+        PC = PC++;
+        
 
         //There are currently only switch statements for opCodes that a required for booting
         switch(opCode){
             case 0x86:
                 //ADD A,(HL)
+                //memoryAddress = mmu.read(HL);
+                //register A += value at mmu.read(memoryAddress);
                 break;
 
             case 0xCD:

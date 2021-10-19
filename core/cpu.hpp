@@ -24,12 +24,21 @@ public:
  private:
   MMU mmu;
   u16* bootRomLocation;
-  uint16_t AF;
-  uint16_t BC;
-  uint16_t DE;
-  uint16_t HL;
-  uint16_t SP;
-  uint16_t PC;
+  
+  //We'll have to figure out how to structure the registers so we can easily access one or both at the same time
+  u16 AF;
+  u16 BC;
+  u16 DE;
+  u16 HL;
+  u16 SP;
+  u16 PC;
+  u8 A;
+  u8 B;
+  u8 C;
+  u8 D;
+  u8 E;
+  u8 H;
+  u8 L;
 
 
   // Registers
