@@ -252,17 +252,17 @@ u8 CPU::exec(){
 
 // Helpers
 u8 CPU::getHighByte(u16 value){
-    
+    return ((value>>8) & 0xff);
 }
 u8 CPU::getLowByte(u16 value){
-
+    return (value & 0xff);
 }
 
 u8 CPU::setHighByte(u16* destination, u8 value){
-
+    *destination = (*destination & 0x00ff) | (value << 8);
 }
 u8 CPU::setLowByte(u16* destination, u8 value){
-
+    *destination = (*destination & 0xff00) | value;
 }
 
 // Map from the register code to the register value itself
