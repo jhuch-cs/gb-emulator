@@ -34,6 +34,18 @@ private:
   MMU mmu;
   Mode mode;
 
+  unsigned int cyclesLeft;
+
+  const int LCD_WIDTH = 144;
+  const int LCD_HEIGHT = 160;
+
+  const int OAM_CLOCKS = 80;
+  const int VRAM_CLCOKS = 172;
+  const int HBLANK_CLOCKS = 204;
+  const int VBLANK_CLOCKS = 4560;
+
+  const u16 OAM_TABLE = 0xFE00;
+
   // LCDC (0xFF40) - LCD Control
     // Bit 7	LCD and PPU enable	0=Off, 1=On
     // Bit 6	Window tile map area	0=9800-9BFF, 1=9C00-9FFF
@@ -43,7 +55,7 @@ private:
     // Bit 2	OBJ size	0=8x8, 1=8x16
     // Bit 1	OBJ enable	0=Off, 1=On
     // Bit 0	BG and Window enable/priority	0=Off, 1=On
-  const u8 lcdc = 0xFF40;
+  u16 lcdc = mmu.read(0xFF40);
 
   // STAT (0xFF41) - LCD Status
     // Bit 6 - LYC=LY STAT Interrupt source         (1=Enable) (Read/Write)
@@ -56,23 +68,22 @@ private:
     //           1: VBlank
     //           2: Searching OAM
     //           3: Transferring Data to LCD Controller
-  const u8 stat = 0xFF41;
+  u16 stat = mmu.read(0xFF41);
 
   // ScrollY (0xFF42) - y pos of background
   // ScrollX (0xFF43) - x pos of background
-  const u8 scy = 0xFF42;
-  const u8 scx = 0xFF43;
+  u16 scy = mmu.read(0xFF42);
+  u16 scx = mmu.read(0xFF43);
 
   // LY (0xFF44) - LCD Y Coordinate (aka current scanline)
   // Holds values 0-153, with 144-153 indicating VBLANK
-  const u8 ly = 0xFF44;
+  u16 ly = mmu.read(0xFF44);
 
   // LYC (0xFF45) - LY Compare
-  const u8 lyc = 0xFF45;
+  u16 lyc = mmu.read(0xFF45);
 
-  // DMA (0xFF46) - DMA Transfer and Start
-  // 160 cycles
-  const u8 dma = 0xFF46;
+  // DMA (0xFF46) - DMA Transfer and Start (160 cycles?)
+  u16 dma = mmu.read(0xFF46);
 
   // WHITE = 0  #9bbc0f RGB: 155, 188, 15
   // LIGHT_GRAY = 1 #8bac0f RGB: 139, 172, 15
@@ -84,22 +95,22 @@ private:
     // Bit 5-4 Color for index 2
     // Bit 3-2 Color for index 1
     // Bit 1-0 Color for index 0
-  const u8 bgp = 0xFF47;
+  u16 bgp = mmu.read(0xFF47);
 
   // obp0 (0xFF48) - OBJ palette 0 data
   // Just like bgp but bits 1-0 ignored because color index 0 is transparent for sprites
-  const u8 obp0 = 0xFF48;
+  u16 obp0 = mmu.read(0xFF48);
 
   // obp1 (0XFF49) - OBJ palette 1 data
-  const u8 obp1 = 0xFF49;
+  u16 obp1 = mmu.read(0xFF49);
 
   // WindowY (0xFF4A) - y pos of window
   // WindowX (0xFF4B) - x pos - 7 of window
-  const u8 wy = 0xFF4A;
-  const u8 wx = 0xFF4B;
+  u16 wy = mmu.read(0xFF4A);
+  u16 wx = mmu.read(0xFF4B) - 7;
 
-  void drawScanLine(u8 lcdCtrl);
-  void renderTiles(u8 lcdCtrl);
+  void drawScanLine();
+  void renderTiles();
   void renderSprites();
 
   // 160 x 144 x 3 (last dimenstion is pixel, rgb)
