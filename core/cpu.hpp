@@ -5,7 +5,8 @@
 
 class CPU {
 public: 
-  CPU(MMU& mmu);
+  // At construction time, `exec` the boot rom
+  CPU(MMU& mmu, u8* bootRomLocation);
   
   // Ultimately, `step()` should return the number of cycles required to completely execute the op code
   // that we processed this step. But timing is not mission critical at the moment, so you can just 
@@ -17,9 +18,8 @@ public:
   // as 24 cycles to complete
   u8 step();
 
-  u8 exec(u8 opcode);
-
-  void loadBootRom(u8* bootRomLocation);
+  // Rely on the `pc` for the exec location
+  u8 exec();
 
  private:
   MMU mmu;
