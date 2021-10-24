@@ -211,18 +211,27 @@ u8 CPU::exec(){
                 break;
             case 0x1A:
                 //LD A,(DE)
+                setHighByte(&af, mmu.read(de));
                 break;
             case 0x7C:
                 //LD A,H
+                u8 h = getHighByte(hl);
+                setHighByte(&af, h);
                 break;
             case 0x7B:
                 //LD A,E
+                u8 e = getLowByte(de);
+                setHighByte(&af, e);
                 break;
             case 0x7D:
                 //LD A,L
+                u8 l = getLowByte(hl);
+                setHighByte(&af, l);
                 break;
             case 0x78:
                 //LD A,B
+                u8 b = getHighByte(bc);
+                setHighByte(&af, b);
                 break;
             
             case 0x06:
@@ -234,10 +243,14 @@ u8 CPU::exec(){
                 break;
             case 0x4F:
                 //LD C,A
+                u8 a = getHighByte(af);
+                setLowByte(&bc, a);
                 break;
             
             case 0x57:
                 //LD D,A
+                u8 a = getHighByte(af);
+                setHighByte(&de, a);
                 break;
             case 0x16:
                 //LD D,d8
@@ -253,6 +266,8 @@ u8 CPU::exec(){
             
             case 0x67:
                 //LD H,A
+                u8 a = getHighByte(af);
+                setHighByte(&hl, a);
                 break;
             
             case 0x21:
@@ -268,6 +283,8 @@ u8 CPU::exec(){
             
             case 0xE2:
                 //LD (C),A same as LD($FF00+C),A
+                mmu.write(getLowByte(bc) + 0xFF00, getHighByte(af));
+                // sleep?
                 break;
             
             case 0xEA:
@@ -276,12 +293,18 @@ u8 CPU::exec(){
             
             case 0x77:
                 //LD (HL),A
+                mmu.write(hl, getHighByte(af));
+                // SOMETHING ABOUT A MEMORY SLEEP CYCLE???
                 break;
             case 0x32:
                 //LD (HL-),A
+                mmu.write(hl--, getHighByte(af));
+                // SOMETHING ABOUT A MEMORY SLEEP CYCLE???
                 break;
             case 0x22:
                 //LD (HL+),A
+                mmu.write(hl++, getHighByte(af));
+                // SOMETHING ABOUT A MEMORY SLEEP CYCLE???
                 break;
 
             case 0xF0:
@@ -289,6 +312,7 @@ u8 CPU::exec(){
                 break;
             case 0xE0:
                 //LDH (a8),A same as LD ($FF00+a8),A
+
                 break;
             
             case 0xC5:
@@ -309,10 +333,17 @@ u8 CPU::exec(){
             
             case 0x90:
                 //SUB B
+                u8 b = getHighByte(bc);
+                u8 a = getHighByte(af);
+                u8 res = a - b;
+                setHighByte(&af, res);
                 break;
             
             case 0xAF:
                 //XOR A
+                u8 a = getHighByte(af);
+                a ^= a;
+                setHighByte(&af, a);
                 break;
         }
     }
