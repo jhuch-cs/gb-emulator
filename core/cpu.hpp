@@ -6,7 +6,7 @@
 class CPU {
 public: 
   // At construction time, `exec` the boot rom
-  CPU(MMU& mmu, u16* bootRomLocation);
+  CPU(MMU& mmu);
   
   // Ultimately, `step()` should return the number of cycles required to completely execute the op code
   // that we processed this step. But timing is not mission critical at the moment, so you can just 
@@ -23,7 +23,6 @@ public:
 
  private:
   MMU mmu;
-  u16* bootRomLocation;
   // Registers
 
   // Registers are sometimes combined into 16-bit registers. First register is the high-byte.
@@ -42,11 +41,6 @@ public:
 
   u8 setHighByte(u16* destination, u8 value);
   u8 setLowByte(u16* destination, u8 value);
-
-  // Map from the register code to the register value itself
-  u8 get8BitRegister(u8 registerValue);
-  u16 get16BitRegister(u8 registerValue);
-
 
   // TODO: Like 200 op-codes and stack management functions, too
   // Op codes: pg. 65, http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf
