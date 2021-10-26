@@ -34,13 +34,19 @@ public:
   // `sp` is stack pointer, `pc` is program counter
   u16 sp, pc;
 
+  u8 execCB();
 
-  // Helpers
-  u8 getHighByte(u16 value);
-  u8 getLowByte(u16 value);
+  void setCarryFlag(bool value);
+  void setHalfCarryFlag(bool value);
+  void setSubtractFlag(bool value);
+  void setZeroFlag(bool value);
 
-  u8 setHighByte(u16* destination, u8 value);
-  u8 setLowByte(u16* destination, u8 value);
+  bool readCarryFlag();
+  bool readHalfCarryFlag();
+  bool readSubtractFlag();
+  bool readZeroFlag();
+
+  u8* getRegisterFromEncoding(u8 nibble);
 
   // TODO: Like 200 op-codes and stack management functions, too
   // Op codes: pg. 65, http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf

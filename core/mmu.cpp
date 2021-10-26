@@ -1,5 +1,3 @@
-#pragma once
-
 #include "./mmu.hpp"
 
 bool checkAddressIsValid(u16 address) {
