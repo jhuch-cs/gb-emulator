@@ -5,6 +5,7 @@
 class MMU {
 public: 
   MMU();
+  ~MMU();
 
   u8 read(u16 address);
   u16 read16Bit(u16 address);
