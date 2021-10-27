@@ -1,6 +1,9 @@
+#include <iostream>
 #include "mmu.hpp"
 #include "util.hpp"
 #include "cpu.hpp"
+
+#define HALT_EXIT 99
 
 //flags in AF register
 const u8 zero_flag_z = 0x80; //it's the 7th bit
@@ -204,48 +207,12 @@ u8 CPU::exec(){
             setHighByte(&af, mmu.read(de));
             break;
         }
-        case 0x7C: {
-            //LD A,H
-            u8 h = getHighByte(hl);
-            setHighByte(&af, h);
-            break;
-        }
-        case 0x7B: {
-            //LD A,E
-            u8 e = getLowByte(de);
-            setHighByte(&af, e);
-            break;
-        }
-        case 0x7D: {
-            //LD A,L
-            u8 l = getLowByte(hl);
-            setHighByte(&af, l);
-            break;
-        }
-        case 0x78: {
-            //LD A,B
-            u8 b = getHighByte(bc);
-            setHighByte(&af, b);
-            break;
-        }
         case 0x06: {
             //LD B,d8
             break;
         }
         case 0x0E: {
             //LD C,d8
-            break;
-        }
-        case 0x4F: {
-            //LD C,A
-            u8 a = getHighByte(af);
-            setLowByte(&bc, a);
-            break;
-        }
-        case 0x57: {
-            //LD D,A
-            u8 a = getHighByte(af);
-            setHighByte(&de, a);
             break;
         }
         case 0x16: {
@@ -258,12 +225,6 @@ u8 CPU::exec(){
         }
         case 0x1E: {
             //LD E,d8
-            break;
-        }
-        case 0x67: {
-            //LD H,A
-            u8 a = getHighByte(af);
-            setHighByte(&hl, a);
             break;
         }
         case 0x21: {
@@ -286,13 +247,6 @@ u8 CPU::exec(){
         }
         case 0xEA: {
             //LD (a16),A
-            break;
-        }
-        case 0x77: {
-            //LD (HL),A
-            mmu.write(hl, getHighByte(af));
-            // SOMETHING ABOUT A MEMORY SLEEP CYCLE???
-            cycles = 8;
             break;
         }
         case 0x32: {
@@ -348,6 +302,43 @@ u8 CPU::exec(){
             a ^= a;
             setHighByte(&af, a);
             break;
+        }
+        case 0x76: {
+            //HALT
+            std::cout << "Halt Instruction Reached" << std::endl;
+            std::exit(HALT_EXIT);
+            return 4;
+        }
+        case 0x46: case 0x4E: case 0x56: case 0x5E: 
+        case 0x66: case 0x6E: case 0x7E: {
+            //LD r1, (HL)
+            u8 encodedRegister = (opCode - 0x40) / 8;
+            u8* r1 = getRegisterFromEncoding(encodedRegister);
+            u8 value = mmu.read(hl);
+            *r1 = value;
+            
+            return 8;
+        }
+        case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x47:
+        case 0x48: case 0x49: case 0x4A: case 0x4B: case 0x4C: case 0x4D: case 0x4F:
+        case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x57:
+        case 0x58: case 0x59: case 0x5A: case 0x5B: case 0x5C: case 0x5D: case 0x5F:
+        case 0x60: case 0x61: case 0x62: case 0x63: case 0x64: case 0x65: case 0x67:
+        case 0x68: case 0x69: case 0x6A: case 0x6B: case 0x6C: case 0x6D: case 0x6F:
+        case 0x78: case 0x79: case 0x7A: case 0x7B: case 0x7C: case 0x7D: case 0x7F: {
+            //LD r1,r2
+            u8 *r1 = getRegisterFromEncoding((opCode - 0x40) / 8);
+            u8 *r2 = getRegisterFromEncoding(getLowNibble(opCode));
+            *r1 = *r2;
+            
+            return 4;
+        }
+        case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x77: {
+            //LD (HL), r1
+            u8 *r1 = getRegisterFromEncoding(getLowNibble(opCode));
+            mmu.write(hl, *r1);
+
+            return 8;
         }
         case 0xCB:
             return execCB();
