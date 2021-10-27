@@ -55,9 +55,15 @@ u8 CPU::exec(){
             //ADD A,(HL)
             u8 value_at_hl = mmu.read(hl);
             u8 a = getHighByte(af);
-            a += value_at_hl;
-            setHighByte(&af, a);
-            break; 
+            u8 result = a + value_at_hl;
+
+            setCarryFlag(((a + value_at_hl) & 0x100) != 0);
+            setHalfCarryFlag((a & 0xF) + (value_at_hl & 0xF) > 0xF);
+            setSubtractFlag(false);
+            setZeroFlag(result == 0);
+
+            setHighByte(&af, result);
+            return 8; 
         }
         case 0xCD: {
             //CALL a16
@@ -85,20 +91,6 @@ u8 CPU::exec(){
 
             //TODO: need to look up when to set half cary flag
             break;
-        }
-        case 0xBE: {
-            //CP (HL)
-            //CP is a subtraction from A that doesn't update A, only the flags it would have set/reset if it really was subtracted.
-            u8 valueAtHL = mmu.read(hl);
-            u8 a = getHighByte(af);
-            u8 compare = a - valueAtHL;
-
-            setSubtractFlag(true);
-            setCarryFlag(compare < 0);
-            setZeroFlag(compare == 0);
-
-            //TODO: need to look up when to set half cary flag
-            break; 
         }
         case 0x3D: {
             //DEC A
@@ -288,21 +280,6 @@ u8 CPU::exec(){
             //RLA
             break;
         }
-        case 0x90: {
-            //SUB B
-            u8 b = getHighByte(bc);
-            u8 a = getHighByte(af);
-            u8 res = a - b;
-            setHighByte(&af, res);
-            break;
-        }
-        case 0xAF: {
-            //XOR A
-            u8 a = getHighByte(af);
-            a ^= a;
-            setHighByte(&af, a);
-            break;
-        }
         case 0x76: {
             //HALT
             std::cout << "Halt Instruction Reached" << std::endl;
@@ -339,6 +316,217 @@ u8 CPU::exec(){
             mmu.write(hl, *r1);
 
             return 8;
+        }
+        //TODO: These operation op code are duplicated. Refactor into helper methods
+        case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x87: {
+            //ADD A,r1
+            u8 *r1 = getRegisterFromEncoding(getLowNibble(opCode));
+            u8 a = getHighByte(af);
+            u16 untruncated_result = a + *r1;
+            u8 result = (u8) untruncated_result;
+            
+            //TODO: I'm a little iffy on the half-carry logic
+            setCarryFlag(untruncated_result > 0xFF);
+            setHalfCarryFlag((a & 0xF) + (*r1 & 0xF) > 0xF);
+            setSubtractFlag(false);
+            setZeroFlag(result == 0);
+
+            setHighByte(&af, result);
+            return 4;
+        }
+        case 0x8E: {
+            //ADC A, (HL)
+            u8 value_at_hl = mmu.read(hl);
+            u8 a = getHighByte(af);
+            u16 untruncated_result = a + value_at_hl + readCarryFlag();
+            u8 result = (u8) untruncated_result;
+
+            //TODO: I'm a little iffy on the half-carry logic
+            setCarryFlag(untruncated_result > 0xFF);
+            setHalfCarryFlag((a & 0xF) + (value_at_hl & 0xF) + readCarryFlag() > 0xF);
+            setSubtractFlag(false);
+            setZeroFlag(result == 0);
+
+            setHighByte(&af, result);
+            return 8; 
+        }
+        case 0x88: case 0x89: case 0x8A: case 0x8B: case 0x8C: case 0x8D: case 0x8F: {
+            //ADC A, r1
+            u8 *r1 = getRegisterFromEncoding(getLowNibble(opCode));
+            u8 a = getHighByte(af);
+            u16 untruncated_result = a + *r1 + readCarryFlag();
+            u8 result = (u8) untruncated_result;
+
+            //TODO: I'm a little iffy on the half-carry logic
+            setCarryFlag(untruncated_result > 0xFF);
+            setHalfCarryFlag((a & 0xF) + (*r1 & 0xF) + readCarryFlag() > 0xF);
+            setSubtractFlag(false);
+            setZeroFlag(result == 0);
+
+            setHighByte(&af, result);
+            return 4;
+        }
+        case 0x96: {
+            //SUB (HL)
+            u8 value = mmu.read(hl);
+            u8 a = getHighByte(af);
+            u8 result = a - value;
+
+            // Iffy on the half-carry flag here
+            setCarryFlag(a < value); //went negative
+            setHalfCarryFlag((a & 0xF) - (value & 0xF) < 0x0); //nibble went negative?
+            setSubtractFlag(true);
+            setZeroFlag(result == 0);
+
+            setHighByte(&af, result);
+            return 8;
+        }
+        case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x97: {
+            //SUB r
+            u8 *r = getRegisterFromEncoding(getLowNibble(opCode));
+            u8 a = getHighByte(af);
+            u8 result = a - *r;
+
+            // Iffy on the half-carry flag here
+            setCarryFlag(a < *r); //went negative
+            setHalfCarryFlag((a & 0xF) - (*r & 0xF) < 0x0); //nibble went negative?
+            setSubtractFlag(true);
+            setZeroFlag(result == 0);
+
+            setHighByte(&af, result);
+            return 4;
+        }
+        case 0x9E: {
+            //SBC A,(HL)
+            u8 value = mmu.read(hl);
+            u8 a = getHighByte(af);
+            u8 result = a - value - readCarryFlag();
+
+            // Iffy on the half-carry flag here
+            setCarryFlag(a < value + readCarryFlag()); //went negative
+            setHalfCarryFlag((a & 0xF) - (value & 0xF) - readCarryFlag() < 0x0); //nibble went negative?
+            setSubtractFlag(true);
+            setZeroFlag(result == 0);
+
+            setHighByte(&af, result);
+            return 8;
+        }
+        case 0x98: case 0x99: case 0x9A: case 0x9B: case 0x9C: case 0x9D: case 0x9F: {
+            //SBC A,r
+            u8 *r = getRegisterFromEncoding(getLowNibble(opCode));
+            u8 a = getHighByte(af);
+            u8 result = a - *r - readCarryFlag();
+
+            // Iffy on the half-carry flag here
+            setCarryFlag(a < *r + readCarryFlag()); //went negative
+            setHalfCarryFlag((a & 0xF) - (*r & 0xF) - readCarryFlag() < 0x0); //nibble went negative?
+            setSubtractFlag(true);
+            setZeroFlag(result == 0);
+
+            setHighByte(&af, result);
+            return 4;
+        }
+        case 0xA6: {
+            //AND (HL)
+            u8 value = mmu.read(hl);
+            u8 result = getHighByte(af) & value;
+            setHighByte(&af, result);
+
+            setCarryFlag(false);
+            setHalfCarryFlag(true);
+            setSubtractFlag(false);
+            setZeroFlag(result == 0);
+
+            return 8;
+        }
+        case 0xA0: case 0xA1: case 0xA2: case 0xA3: case 0xA4: case 0xA5: case 0xA7: {
+            //AND r
+            u8 *r = getRegisterFromEncoding(getLowNibble(opCode));
+            u8 result = getHighByte(af) & *r;
+            setHighByte(&af, result);
+
+            setCarryFlag(false);
+            setHalfCarryFlag(true);
+            setSubtractFlag(false);
+            setZeroFlag(result == 0);
+
+            return 4;
+        }
+        case 0xAE: {
+            //XOR (HL)
+            u8 value = mmu.read(hl);
+            u8 result = getHighByte(af) ^ value;
+            setHighByte(&af, result);
+
+            setCarryFlag(false);
+            setHalfCarryFlag(false);
+            setSubtractFlag(false);
+            setZeroFlag(result == 0);
+
+            return 8;
+        }
+        case 0xA8: case 0xA9: case 0xAA: case 0xAB: case 0xAC: case 0xAD: case 0xAF: {
+            //XOR r
+            u8 *r = getRegisterFromEncoding(getLowNibble(opCode));
+            u8 result = getHighByte(af) ^ *r;
+            setHighByte(&af, result);
+
+            setCarryFlag(false);
+            setHalfCarryFlag(false);
+            setSubtractFlag(false);
+            setZeroFlag(result == 0);
+
+            return 4;
+        }
+        case 0xB6: {
+            //OR (HL)
+            u8 value = mmu.read(hl);
+            u8 result = getHighByte(af) | value;
+            setHighByte(&af, result);
+
+            setCarryFlag(false);
+            setHalfCarryFlag(false);
+            setSubtractFlag(false);
+            setZeroFlag(result == 0);
+
+            return 8;
+        }
+        case 0xB0: case 0xB1: case 0xB2: case 0xB3: case 0xB4: case 0xB5: case 0xB7: {
+            //OR r
+            u8 *r = getRegisterFromEncoding(getLowNibble(opCode));
+            u8 result = getHighByte(af) | *r;
+            setHighByte(&af, result);
+
+            setCarryFlag(false);
+            setHalfCarryFlag(false);
+            setSubtractFlag(false);
+            setZeroFlag(result == 0);
+
+            return 4;
+        }
+        case 0xBE: {
+            //CP (HL)
+            u8 valueAtHL = mmu.read(hl);
+            u8 a = getHighByte(af);
+
+            setSubtractFlag(true);
+            setZeroFlag(a == valueAtHL);
+            setHalfCarryFlag((a & 0xF) - (valueAtHL & 0xF) < 0x0); //nibble went negative?
+            setCarryFlag(a < valueAtHL);
+
+            return 8;
+        }
+        case 0xB8: case 0xB9: case 0xBA: case 0xBB: case 0xBC: case 0xBD: case 0xBF: {
+            //CP r
+            u8 *r = getRegisterFromEncoding(getLowNibble(opCode));
+            u8 a = getHighByte(af);
+
+            setSubtractFlag(true);
+            setZeroFlag(a == *r);
+            setHalfCarryFlag((a & 0xF) - (*r & 0xF) < 0x0); //nibble went negative?
+            setCarryFlag(a < *r);
+
+            return 4;
         }
         case 0xCB:
             return execCB();
