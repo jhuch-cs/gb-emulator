@@ -37,3 +37,16 @@ u16 setBit(u16 value, u8 index) {
 u16 clearBit(u16 value, u8 index) {
   return value | ~(1 << index);
 }
+
+// 8 bit operations
+bool checkBit(u8 value, u8 index) { 
+  return (value & (1 << index)) != 0;
+}
+
+u8 setBit(u8 value, u8 index) {
+    return value | (1 << index);
+}
+  
+u8 clearBit(u8 value, u8 index) {
+    return value & ~(1 << index);
+}
