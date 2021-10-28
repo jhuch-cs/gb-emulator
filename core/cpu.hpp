@@ -41,12 +41,27 @@ public:
   void setSubtractFlag(bool value);
   void setZeroFlag(bool value);
 
+  u8 op_add(u8 reg, u8 value);
+  u8 op_adc(u8 reg, u8 value);
+  u8 op_sub(u8 reg, u8 value);
+  u8 op_sbc(u8 reg, u8 value);
+  u8 op_and(u8 reg, u8 value);
+  u8 op_xor(u8 reg, u8 value);
+  u8 op_or(u8 reg, u8 value);
+  void op_cp(u8 reg, u8 value);
+
+  u8 op_rlc(u8 reg);
+  u8 op_rl(u8 reg);
+  u8 op_rrc(u8 reg);
+  u8 op_rr(u8 reg);
+  
   bool readCarryFlag();
   bool readHalfCarryFlag();
   bool readSubtractFlag();
   bool readZeroFlag();
 
   u8* getRegisterFromEncoding(u8 nibble);
+  u16* get16BitRegisterFromEncoding(u8 nibble);
 
   // TODO: Like 200 op-codes and stack management functions, too
   // Op codes: pg. 65, http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf
