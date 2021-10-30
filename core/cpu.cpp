@@ -6,11 +6,6 @@
 #define HALT_EXIT 99
 
 //flags in AF register
-const u8 zero_flag_z = 0x80; //it's the 7th bit
-const u8 subtraction_flag_n = 0x40; //it's the 6th bit
-const u8 half_carry_flag_h = 0x20; //it's the 5th bit
-const u8 carry_flag_c = 0x10; //it's the 4th bit
-
 const u8 zero_flag_index = 7;
 const u8 subtraction_flag_index = 6;
 const u8 half_carry_flag_index = 5;
@@ -256,6 +251,7 @@ u8 CPU::exec(){
             u32 untruncated_result = hl + *rr;
             u16 result = (u16) untruncated_result;
 
+            //TODO: Iffy on the 16bit half-carry logic here
             setCarryFlag(untruncated_result > 0xFFFF);
             setHalfCarryFlag((hl & 0xFFF) + (*rr & 0xFFF) > 0xFFF);
             setSubtractFlag(false);
@@ -404,8 +400,7 @@ u8 CPU::exec(){
         } 
         case 0x76: {
             //HALT
-            std::cout << "Halt Instruction Reached" << std::endl;
-            std::exit(HALT_EXIT);
+            //TODO: Suspend until an interrupt occurs
             return 4;
         }
         case 0x46: case 0x4E: case 0x56: case 0x5E: 
@@ -812,9 +807,8 @@ u8 CPU::op_add(u8 reg, u8 value) {
     u16 untruncated_result = reg + value;
     u8 result = (u8) untruncated_result;
     
-    //TODO: I'm a little iffy on the half-carry logic
     setCarryFlag(untruncated_result > 0xFF);
-    setHalfCarryFlag((reg & 0xF) + (value & 0xF) > 0xF);
+    setHalfCarryFlag(((reg & 0xF) + (value & 0xF)) & 0x10);
     setSubtractFlag(false);
     setZeroFlag(result == 0);
 
@@ -824,9 +818,8 @@ u8 CPU::op_adc(u8 reg, u8 value) {
     u16 untruncated_result = reg + value + readCarryFlag();
     u8 result = (u8) untruncated_result;
 
-    //TODO: I'm a little iffy on the half-carry logic
     setCarryFlag(untruncated_result > 0xFF);
-    setHalfCarryFlag((reg & 0xF) + (value & 0xF) + readCarryFlag() > 0xF);
+    setHalfCarryFlag(((reg & 0xF) + (value & 0xF) + readCarryFlag()) & 0x10);
     setSubtractFlag(false);
     setZeroFlag(result == 0);
 
@@ -835,9 +828,8 @@ u8 CPU::op_adc(u8 reg, u8 value) {
 u8 CPU::op_sub(u8 reg, u8 value) {
     u8 result = reg - value;
 
-    // Iffy on the half-carry flag here
     setCarryFlag(reg < value); //went negative
-    setHalfCarryFlag((reg & 0xF) - (value & 0xF) < 0x0); //nibble went negative?
+    setHalfCarryFlag(((reg & 0xF) - (value & 0xF)) & 0x10);
     setSubtractFlag(true);
     setZeroFlag(result == 0);
 
@@ -846,9 +838,8 @@ u8 CPU::op_sub(u8 reg, u8 value) {
 u8 CPU::op_sbc(u8 reg, u8 value) {
     u8 result = reg - value - readCarryFlag();
 
-    // Iffy on the half-carry flag here
     setCarryFlag(reg < value + readCarryFlag()); //went negative
-    setHalfCarryFlag((reg & 0xF) - (value & 0xF) - readCarryFlag() < 0x0); //nibble went negative?
+    setHalfCarryFlag(((reg & 0xF) - (value & 0xF) - readCarryFlag()) & 0x10);
     setSubtractFlag(true);
     setZeroFlag(result == 0);
 
@@ -887,7 +878,7 @@ u8 CPU::op_or(u8 reg, u8 value) {
 void CPU::op_cp(u8 reg, u8 value) {
     setSubtractFlag(true);
     setZeroFlag(reg == value);
-    setHalfCarryFlag((reg & 0xF) - (value & 0xF) < 0x0); //nibble went negative?
+    setHalfCarryFlag(((reg & 0xF) - (value & 0xF)) & 0x10);
     setCarryFlag(reg < value);
 }
 
