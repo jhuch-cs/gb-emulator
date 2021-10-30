@@ -7,3 +7,6 @@ a.out
 gb-emulator
 gb-emulator.exe
 .DS_Store
+.vscode/
+debug.cpp
+
