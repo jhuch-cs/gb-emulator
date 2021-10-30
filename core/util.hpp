@@ -48,4 +48,16 @@ inline u8 setHighByte(u16* destination, u8 value){
 inline u8 setLowByte(u16* destination, u8 value){
   *destination = (*destination & 0xff00) | value;
   return *destination;
+
+// 8 bit operations
+inline bool checkBit(u8 value, u8 index) { 
+  return (value & (1 << index)) != 0;
+}
+
+inline u8 setBit(u8 value, u8 index) {
+    return value | (1 << index);
+}
+  
+inline u8 clearBit(u8 value, u8 index) {
+    return value & ~(1 << index);
 }

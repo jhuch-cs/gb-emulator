@@ -4,6 +4,7 @@ SDL2/
 main.exe
 main
 a.out
+gb-emulator
 gb-emulator.exe
 .DS_Store
 .vscode/
