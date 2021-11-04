@@ -339,19 +339,6 @@ u8 CPU::exec(){
             setSubtractFlag(false);
             return 4;
         }
-        case 0xCD: {
-            //CALL a16
-            sp--;
-            sp--;
-            mmu.write(sp, pc);
-
-            
-            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
-            u16 nn_nn = mmu.read16Bit(pc++);
-            pc++;
-            pc = nn_nn;
-            break; 
-        }
         case 0xFE: {
             //CP d8
             //CP is a subtraction from A that doesn't update A, only the flags it would have set/reset if it really was subtracted.
@@ -373,31 +360,6 @@ u8 CPU::exec(){
             cycles = 8;
             break;
         }
-        case 0xEA: {
-            //LD (a16),A
-            break;
-        }
-        case 0xF0: {
-            //LDH A,(a8) same as LD A,($FF00+a8)
-            break;
-        }
-        case 0xE0: {
-            //LDH (a8),A same as LD ($FF00+a8),A
-
-            break;
-        }
-        case 0xC5: {
-            //PUSH BC
-            break;
-        }
-        case 0xC1: {
-            //POP BC
-            break;
-        }
-        case 0xC9: {
-            //RET
-            break;
-        } 
         case 0x76: {
             //HALT
             //TODO: Suspend until an interrupt occurs
@@ -560,8 +522,421 @@ u8 CPU::exec(){
             op_cp(a, *r);
             return 4;
         }
+        case 0xC0: {
+            //RET NZ
+            if(readSubtractFlag() & readZeroFlag()){
+                pc = mmu.read(sp);
+                sp++;
+                sp++;
+                return 20;
+            }
+            else{
+                return 8;
+            }
+        }
+        case 0xC1: {
+            //POP BC
+            bc = mmu.read(sp);
+            sp++;
+            sp++;
+            return 12;
+        }
+        case 0xC2: {
+            //JP NZ, a16
+            //check if subtraction flag(n) & zero flags are set
+
+            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
+            u16 nn_nn = mmu.read16Bit(pc++);
+            pc++;
+
+            if(readZeroFlag() & readSubtractFlag()){
+                pc = nn_nn;
+                return 16;
+            }
+            else{
+                return 12;
+            }
+        }
+        case 0xC3: {
+            //JP a16
+            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
+            u16 nn_nn = mmu.read16Bit(pc++);
+            pc++;
+            pc = nn_nn;
+            return 16;
+        }
+        case 0xC4: {
+            //CALL NZ, a16
+            //check if subtraction flag(n) & zero flags are set
+
+            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
+            u16 nn_nn = mmu.read16Bit(pc++);
+            pc++;
+
+            if(readZeroFlag() & readSubtractFlag()){
+                sp--;
+                sp--;
+                mmu.write(sp, pc);
+
+                pc = nn_nn;
+                return 24;
+            }
+            else{
+                return 12;
+            }
+        }
+        case 0xC5: {
+            //PUSH BC
+            sp--;
+            sp--;
+
+            mmu.write(sp, bc);
+            return 16;
+        }
+        case 0xC6: {
+            //ADD A, d8
+            return 4;
+        }
+        case 0xC7, 0xCF, 0xD7, 0xDF, 0xE7, 0xEF, 0xF7, 0xFF: {
+            //RST 00H, 08H, 10H, 18H, 20H, 28H, 30H, 38H
+            sp--;
+            sp--;
+            mmu.write(sp, pc);
+
+            call_value = (opCode-0xC7);
+            pc = call_value;
+            return 16;
+        }
+        case 0xC8: {
+            //RET Z
+            if(readZeroFlag()){
+                pc = mmu.read(sp);
+                sp++;
+                sp++;
+                return 20;
+            }
+            else{
+                return 8;
+            }
+        }
+        case 0xC9: {
+            //RET
+            return 4;
+        }
+        case 0xCA: {
+            //JP Z, a16
+            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
+            u16 nn_nn = mmu.read16Bit(pc++);
+            pc++;
+
+            if(readZeroFlag()){
+                pc = nn_nn;
+                return 16;
+            }
+            else{
+                return 12;
+            }
+        }
         case 0xCB: {
+            //It's a prefix function
             return execCB();
+        }
+        case 0xCC: {
+            //CALL Z, a16
+            //check if zero flag is set
+
+            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
+            u16 nn_nn = mmu.read16Bit(pc++);
+            pc++;
+
+            if(readZeroFlag()){
+                sp--;
+                sp--;
+                mmu.write(sp, pc);
+
+                pc = nn_nn;
+                return 24;
+            }
+            else{
+                return 12;
+            }
+            return 4;
+        }
+        case 0xCD: {
+            //CALL a16
+            sp--;
+            sp--;
+            mmu.write(sp, pc);
+
+            
+            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
+            u16 nn_nn = mmu.read16Bit(pc++);
+            pc++;
+            pc = nn_nn;
+            return 24; 
+        }
+        case 0xCE: {
+            //ADC A, d8
+            return 4;
+        }
+        case 0xD0: {
+            //RET NC
+            if(readCarryFlag() & readSubtractFlag()){
+                pc = mmu.read(sp);
+                sp++;
+                sp++;
+                return 20;
+            }
+            else{
+                return 8;
+            }
+        }
+        case 0xD1: {
+            //POP DE
+            de = mmu.read(sp);
+            sp++;
+            sp++;
+            return 12;
+        }
+        case 0xD2: {
+            //JP NC, a16
+            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
+            u16 nn_nn = mmu.read16Bit(pc++);
+            pc++;
+
+            if(readCarryFlag() & readSubtractFlag()){
+                pc = nn_nn;
+                return 16;
+            }
+            else{
+                return 12;
+            }
+        }
+        case 0xD4: {
+            //CALL NC, a16
+            //check if subtraction flag(n) & carry flags are set
+
+            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
+            u16 nn_nn = mmu.read16Bit(pc++);
+            pc++;
+
+            if(readCarryFlag() & readSubtractFlag()){
+                sp--;
+                sp--;
+                mmu.write(sp, pc);
+
+                pc = nn_nn;
+                return 24;
+            }
+            else{
+                return 12;
+            }
+            return 4;
+        }
+        case 0xD5: {
+            //PUSH DE
+            sp--;
+            sp--;
+
+            mmu.write(sp, de);
+            return 16;
+        }
+        case 0xD6: {
+            //SUB d8
+            return 4;
+        }
+        case 0xD8: {
+            //RET C
+            if(readCarryFlag()){
+                pc = mmu.read(sp);
+                sp++;
+                sp++;
+                return 20;
+            }
+            else{
+                return 8;
+            }
+        }
+        case 0xD9: {
+            //RETI
+            //return, PC=(SP), SP=SP+2
+            pc = mmu.read(sp);
+            sp++;
+            sp++;
+
+            //enable interrupts (IME=1)
+            /************************NOT SURE HOW TO ENABLE INTERRUPTS*********************/
+            return 16;
+        }
+        case 0xDA: {
+            //JP C, a16
+            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
+            u16 nn_nn = mmu.read16Bit(pc++);
+            pc++;
+
+            if(readCarryFlag()){
+                pc = nn_nn;
+                return 16;
+            }
+            else{
+                return 12;
+            }
+        }
+        case 0xDC: {
+            //CALL C, a16
+            //check if carry flag is set and jump if so
+
+            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
+            u16 nn_nn = mmu.read16Bit(pc++);
+            pc++;
+
+            if(readCarryFlag()){
+                sp--;
+                sp--;
+                mmu.write(sp, pc);
+
+                pc = nn_nn;
+                return 24;
+            }
+            else{
+                return 12;
+            }
+        }
+        case 0xDE: {
+            //SBC A, d8
+            //A=A-n-cy
+            u8 value = mmu.read(pc++);
+            u8 a = getHighByte(af);
+            u8 result = op_sbc(a, value);
+            setHighByte(&af, result);
+            return 8;
+        }
+        case 0xE0: {
+            //LDH (a8), A aka LD ($FF00+a8), A
+            u8 input = mmu.read16Bit(pc++);
+            pc++;
+            mmu.write(input, getHighByte(af));
+            return 16;
+        }
+        case 0xE1: {
+            //POP HL
+            hl = mmu.read(sp);
+            sp++;
+            sp++;
+            return 12;
+        }
+        case 0xE5: {
+            //PUSH HL
+            sp--;
+            sp--;
+
+            mmu.write(sp, hl);
+            return 16;
+        }
+        case 0xE6: {
+            //AND d8
+            u8 n = mmu.read(pc++);
+            u8 a = getHighByte(af);
+            setHighByte(&af, op_and(a, n));
+            return 8;
+        }
+        case 0xE8: {
+            //ADD SP, r8
+            //SP = SP +/- dd ; dd is 8-bit signed number
+            s8 num = mmu.read(pc++);
+            pc = op_add(sp, num));
+            return 16;
+        }
+        case 0xE9: {
+            //JP HL
+            //jump to HL, PC=HL
+            pc = hl;
+            return 4;
+        }
+        case 0xEA: {
+            //LD (a16), A
+            u16 addressToWrite = mmu.read(pc++);
+            pc++;
+
+            mmu.write(addressToWrite, getHighByte(af));
+            return 16;
+        }
+        case 0xEE: {
+            //XOR d8
+            //A=A xor n
+            u8 n = mmu.read(pc++);
+            setHighByte(&af, op_or(getHighByte(af), n));
+            return 8;
+        }
+        case 0xF0: {
+            //LDH A, (a8) aka LD A, ($FF00+a8)
+            u8 input = mmu.read(pc++);
+            setHighByte(&af, (mmu.read(0xFF00+input)));
+            return 12;
+        }
+        case 0xF1: {
+            //POP AF
+            af = mmu.read(sp);
+            sp++;
+            sp++;
+            return 12;
+        }
+        case 0xF2: {
+            //ld A,(FF00+C)
+            u8 c = getLowByte(bc);
+            setHighByte(&af, (mmu.read(0xFF00+c)));
+            return 8;
+        }
+        case 0xF3: {
+            //DI
+            //disable interrupts, IME=0
+            /*******************NOT SURE HOW TO DO THIS*******************/
+            return 4;
+        }
+        case 0xF5: {
+            //PUSH AF
+            sp--;
+            sp--;
+
+            mmu.write(sp, af);
+            return 16;
+        }
+        case 0xF6: {
+            //OR d8
+            u8 valueToOr = mmu.read(pc++);
+
+            u8 a = getHighByte(af);
+            a = op_or(a, valueToOr);
+            setHighByte(&af, a);
+            return 8;
+        }
+        case 0xF8: {
+            //LD HL, SP + r8
+            u8 valueToAdd = mmu.read(pc++);
+            hl = op_add(sp, valueToAdd);
+            return 12;
+        }
+        case 0xF9: {
+            //LD SP, HL
+            sp = hl;
+            return 8;
+        }
+        case 0xFA: {
+            //LD A, (a16)
+            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
+            u16 address = mmu.read16Bit(pc++);
+            pc++;
+
+            u8 a = getHighByte(af);
+            a = mmu.read(address);
+            setHighByte(&af, a);
+            return 16;
+        }
+        case 0xFB: {
+            //EI
+            //enable interrupts, IME=1
+            /*******************NOT SURE HOW TO DO THIS*******************/
+            return 4;
         }
     }
 
