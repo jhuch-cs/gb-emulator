@@ -3,20 +3,13 @@
 #include "./util.hpp"
 #include "./ppu.hpp"
 
-// PPU::PPU(CPU& cpu, MMU& mmu) {
-//   this->cpu = cpu;
-//   this->mmu = mmu;
-//   mode = OAM;
-//   cyclesLeft = 0;
-
-//   frameBuffer = new u8**[LCD_HEIGHT];
-//   for (int i=0; i<LCD_HEIGHT; i++) {
-//     frameBuffer[i] = new u8*[LCD_WIDTH];
-//     for (int j=0; j<LCD_WIDTH; j++) {
-//       frameBuffer[i][j] = new u8[3];
-//     }
-//   }
-// }
+PPU::PPU(CPU& cpu, MMU& mmu) {
+  this->cpu = cpu;
+  this->mmu = mmu;
+  mode = OAM;
+  cyclesLeft = 0;
+  frameBuffer = new u8[LCD_HEIGHT * LCD_WIDTH * 3];
+}
 
 // LCDC (0xFF40) - LCD Control
   // (see lcdc helper functions)
@@ -59,9 +52,7 @@ u8 PPU::get_obp1() { return mmu.read(OBP1); }
 u8 PPU::get_wy() { return mmu.read(WY); }
 u8 PPU::get_wx() { return mmu.read(WX); }
 
-u8*** PPU::getFrameBuffer() { 
-  return frameBuffer;
-}
+u8* PPU::getFrameBuffer() { return frameBuffer; }
 
 // Define setters as needed
 void PPU::set_ly(u8 ly) { mmu.write(LY, ly); }
@@ -88,7 +79,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
 
   if (!isLCDEnabled()) { return; }
 
-  cyclesLeft += cpuCyclesElapsed / 2; // is this corect behavior or should remaining cycles not carry over?
+  cyclesLeft += cpuCyclesElapsed / 2;
 
   // switch based on current mode
   // TODO: need a way to check interupts / set interupts for the CPU, maybe by public access to some methods in CPU..?
@@ -102,12 +93,11 @@ void PPU::step(u8 cpuCyclesElapsed) {
       if (cyclesLeft >= OAM_CLOCKS) {
         cyclesLeft -= OAM_CLOCKS;
         
-        // update stat register for VRAM mode
+        mode = VRAM;
         u8 stat = get_stat();
         stat = setBit(stat, 0);
         stat = setBit(stat, 1);
         mmu.write(STAT, stat);
-        mode = VRAM;
       }
       break;
     case VRAM:
@@ -122,7 +112,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
         stat = clearBit(stat, 1);
         mmu.write(STAT, stat);
 
-        // check for HBLANK interrupt
+        // HBLANK stat interrupt
         if (checkBit(get_stat(), 3)) {
           // signal cpu interrupt?
         }
@@ -132,40 +122,35 @@ void PPU::step(u8 cpuCyclesElapsed) {
       if (cyclesLeft >= HBLANK_CLOCKS) {
         cyclesLeft -= HBLANK_CLOCKS;
 
-        u8 scanline = get_ly();
-
-        // check lyc interupt // should this be somewhere else?
-        bool lyc = (scanline == get_lyc());
-        if (checkBit(get_stat(), 6) && lyc) {
-          // signal cpu interrupt?
-        }
-        
-        // increment current line
-        scanline++;
+        // get and increment scanline
+        u8 scanline = get_ly() + 1;
         mmu.write(LY, scanline);
 
-        // check current scanline == 144, then enter VBLANK, else enter OAM to prepare to draw another line
-        if (scanline == 144) {
+        // check lyc interupt
+        checkLYC(scanline);
+        
+        // check current scanline >= 144, then enter VBLANK, else enter OAM to prepare to draw another line
+        if (scanline >= 144) {
           mode = VBLANK;
           u8 stat = get_stat();
-          stat = lyc ? setBit(stat, 2) : clearBit(stat, 2);
           stat = setBit(stat, 0);
           stat = clearBit(stat, 1);
           mmu.write(STAT, stat);
 
+          // VBLANK stat interrupt 
           if (checkBit(get_stat(), 4)) {
-            // signal cpu interrupt?
+            // TODO: signal cpu interrupt
           }
         } else {
           mode = OAM;
           u8 stat = get_stat();
-          stat = lyc ? setBit(stat, 2) : clearBit(stat, 2);
           stat = clearBit(stat, 0);
           stat = setBit(stat, 1);
           mmu.write(STAT, stat);
 
+          // OAM stat interrupt
           if (checkBit(get_stat(), 5)) {
-            // signal cpu interrupt?
+            // TODO: signal cpu interrupt
           }
         }
       }
@@ -178,8 +163,11 @@ void PPU::step(u8 cpuCyclesElapsed) {
         u8 scanline = get_ly() + 1;
         mmu.write(LY, scanline);
 
+        // check lyc interupt
+        checkLYC(scanline);
+
         // reset scanline to 0 if > 153 (end of VBLANK)
-        if (scanline == 154) {
+        if (scanline >= 154) {
 
           // reset scanline to 0
           mmu.write(LY, 0);
@@ -190,13 +178,31 @@ void PPU::step(u8 cpuCyclesElapsed) {
           stat = setBit(stat, 1);
           mmu.write(STAT, stat);
 
+          // OAM stat interrupt
           if (checkBit(get_stat(), 5)) {
-            // signal cpu interrupt?
+            // TODO: signal cpu interrupt
           }
         }
       }
       break;
   }
+}
+
+void PPU::checkLYC(u8 scanline) {
+  u8 lyc = get_lyc();
+  u8 stat = get_stat();
+
+  if (scanline == lyc) {
+    stat = setBit(stat, 2);
+
+    // LYC=LY stat interrupt
+    if (checkBit(get_stat(), 6)) {
+      // TODO: signal cpu interrupt
+    }
+  } else {
+    stat = clearBit(stat, 2);
+  }
+  mmu.write(STAT, stat);
 }
 
 // PPU mode typically goes from OAM -> VRAM -> HBLANK, repeating until VBLANK (aka mode 1)
@@ -309,9 +315,10 @@ void PPU::renderTiles() {
        default: red = 15; green = 56; blue = 15; break;     // BLACK = 3  #0f380f RGB: 15, 56, 15
      }
 
-     frameBuffer[i][currentLine][0] = red ;
-     frameBuffer[i][currentLine][1] = green ;
-     frameBuffer[i][currentLine][2] = blue ;
+    u8* pixelStartLocation = frameBuffer + (LCD_WIDTH * 3 * currentLine) + 3 * i;
+    pixelStartLocation[0] = red;
+    pixelStartLocation[1] = green;
+    pixelStartLocation[2] = blue;
   }
 }
 
@@ -341,7 +348,7 @@ int PPU::getcolor(int id, u16 palette) {
     // Bit 2-0 Palette number  **CGB Mode Only**     (OBP0-7)
 void PPU::renderSprites() {
 
-  return; // TODO: implement this
+  return; // TODO: implement sprite rendering
 
   bool use8x16 = isObj8x16();
   int objSize = use8x16 ? 16 : 8;
@@ -349,8 +356,8 @@ void PPU::renderSprites() {
   // can render up to 40 sprites, iterate through OAM table
   for (int i = 0; i < 40; i++) {
     u8 spriteIndex = i*4;
-    u8 yPos = mmu.read(OAM_TABLE + spriteIndex) - 16; // should this be - 16 for true pos?
-    u8 xPos = mmu.read(OAM_TABLE + spriteIndex + 1) - 8; // should this be - 8 for true pos?
+    u8 yPos = mmu.read(OAM_TABLE + spriteIndex) - 16;
+    u8 xPos = mmu.read(OAM_TABLE + spriteIndex + 1) - 8;
     u8 tileIndex = mmu.read(OAM_TABLE + spriteIndex + 2);
     u8 attr = mmu.read(OAM_TABLE + spriteIndex + 3);
 

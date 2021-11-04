@@ -26,7 +26,7 @@ public:
 
   // This is pulled out into a method, instead of public field access, so you only
   // have to update the buffer when SDL asks for it
-  u8*** getFrameBuffer();
+  u8* getFrameBuffer();
 
   // Register getters
   u8 get_lcdc();
@@ -44,6 +44,8 @@ public:
 
   // Register setters
   void set_ly(u8 ly);
+  
+  void checkLYC(u8 scanline);
 
   int getcolor(int id, u16 palette);
     
@@ -92,7 +94,7 @@ private:
   void renderSprites();
 
   // 160 x 144 x 3 (last dimenstion is pixel, rgb)
-  static u8*** frameBuffer;
+  static u8* frameBuffer;
 
   // 256 x 256
   u8* backgroundMap;
