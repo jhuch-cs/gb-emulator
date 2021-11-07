@@ -4,8 +4,8 @@
 #include "./cpu.hpp"
 #include "./util.hpp"
 
-const u16 LCD_WIDTH = 144;
-const u16 LCD_HEIGHT = 160;
+const u16 LCD_WIDTH = 160;
+const u16 LCD_HEIGHT = 144;
 
 const u16 OAM_CLOCKS = 80;
 const u16 VRAM_CLOCKS = 172;

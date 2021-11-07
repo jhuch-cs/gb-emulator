@@ -29,7 +29,7 @@ u16 MMU::read16Bit(u16 address) {
         std::cout << "ERROR: Attempted read from forbidden address: " << address << std::endl;
         return 0x00;
     }
-    return (u16(memory[address]) << 8) + memory[ address + 1 ];
+    return (u16(memory[address + 1]) << 8) + memory[address];
 }
 
 void MMU::write(u16 address, u8 value) {
