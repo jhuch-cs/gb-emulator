@@ -1,4 +1,3 @@
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 
@@ -177,6 +176,9 @@ int main(int argc, char *argv[]) {
 							SDL_Event event = { .type = SDL_QUIT };
 							SDL_PushEvent(&event);
 						} break;
+
+						default: {
+						} break;
 					}
 				} break;
 
@@ -217,12 +219,18 @@ int main(int argc, char *argv[]) {
 						case SDL_SCANCODE_RETURN:
 						case SDL_SCANCODE_H: {
 						} break;
+
+						default: {
+						} break;
 					}
 				} break;
 
 				case SDL_QUIT: {
 					quit = true;
 				} break;
+
+				default: {
+				};
 			}
 		}
 
