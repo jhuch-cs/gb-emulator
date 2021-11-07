@@ -73,11 +73,11 @@ int main(int argc, char *argv[]) {
 	char *boot_rom_filename = argv[1];
 	char *game_rom_filename = argv[2];
 
-	int boot_rom_size = load_binary_file(boot_rom_filename, &boot_rom);
+	load_binary_file(boot_rom_filename, &boot_rom);
 
 	atexit(free_boot_rom);
 
-	int game_rom_size = load_binary_file(game_rom_filename, &game_rom);
+	load_binary_file(game_rom_filename, &game_rom);
 
 	atexit(free_game_rom);
 
