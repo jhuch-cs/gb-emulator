@@ -4,7 +4,7 @@
 #include "./util.hpp"
 
 enum Interrupt {
-  VBLANK   = 0,
+  VBLANK_INT   = 0, //avoid conflict with Mode::VBLANK
   LCD_STAT = 1,
   TIMER    = 2,
   SERIAL   = 3,

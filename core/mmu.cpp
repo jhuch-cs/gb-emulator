@@ -1,12 +1,15 @@
-#include "./mmu.hpp"
 #include <iostream>
+#include <stdio.h>
+#include "./mmu.hpp"
 
 bool checkAddressIsValid(u16 address) {
     return address >= 0x0000 && address <= 0xffff;
 }
 
-MMU::MMU() {
+MMU::MMU(Cartridge cartridge) : cartridge(cartridge) {
     memory = new u8[0x10000];
+    memcpy(memory, cartridge.gameRom, cartridge.gameRomSize);
+    memcpy(memory, cartridge.bootRom, BOOT_ROM_SIZE);
 }
 
 MMU::~MMU() {
@@ -39,6 +42,15 @@ void MMU::write(u16 address, u8 value) {
         writeInput(value);
     } else if (address == DIV_ADDRESS) {
         memory[address] = 0;
+    } else if (address == ENABLE_BOOT_ROM) {
+        if (value != 0) { 
+            // Re-map the cartridge
+            memcpy(memory, cartridge.gameRom, BOOT_ROM_SIZE);
+        } else {
+            // Probably not necessary, but it took me 5 seconds to write
+            memcpy(memory, cartridge.bootRom, BOOT_ROM_SIZE);
+        }
+        memory[address] = value;
     } else {
         memory[address] = value;
     }

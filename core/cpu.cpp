@@ -10,9 +10,7 @@ const u8 half_carry_flag_index = 5;
 const u8 carry_flag_index = 4;
 
 
-CPU::CPU(MMU& mmu){
-    this->mmu = mmu;
-    
+CPU::CPU(MMU& mmu) : mmu(mmu) {   
     //setting the pc to start where the boot rom is located
     this->pc = 0;
 
@@ -71,8 +69,8 @@ Interrupt CPU::checkInterrupts() {
 
     if (interrupts_requested == 0) { return NONE; }
 
-    if (checkBit(interrupts_requested, static_cast<int>(VBLANK))) {
-        return VBLANK;
+    if (checkBit(interrupts_requested, static_cast<int>(VBLANK_INT))) {
+        return VBLANK_INT;
     } else if (checkBit(interrupts_requested, static_cast<int>(LCD_STAT))) {
         return LCD_STAT;
     } else if (checkBit(interrupts_requested, static_cast<int>(TIMER))) {
@@ -88,7 +86,7 @@ Interrupt CPU::checkInterrupts() {
 
 u16 CPU::getInterruptVector(Interrupt interrupt) {
     u8 interrupt_index = static_cast<int>(interrupt);
-    u16 address = 0x40 + (interrupt_index * 8); // VBLANK: 0x40, LCD_STAT: 0x48, etc
+    u16 address = 0x40 + (interrupt_index * 8); // VBLANK_INT: 0x40, LCD_STAT: 0x48, etc
     return address;
 }
 
@@ -243,7 +241,7 @@ u8 CPU::exec(){
                 correction |= 0x6;
             }
 
-            if (readCarryFlag() || (!readSubtractFlag && (a > 0x99))) {
+            if (readCarryFlag() || (!readSubtractFlag() && (a > 0x99))) {
                 correction |= 0x60;
             }
 
@@ -315,6 +313,7 @@ u8 CPU::exec(){
             setHalfCarryFlag((hl & 0xFFF) + (*rr & 0xFFF) > 0xFFF);
             setSubtractFlag(false);
 
+            *rr = result;
             return 8;
         }
         case 0x0A: case 0x1A: {
@@ -978,7 +977,7 @@ u8 CPU::op_rrc(u8 reg) {
 u8 CPU::op_rr(u8 reg) {
     u8 carry_flag = readCarryFlag();
     u8 low_bit = readBit(reg, 0);
-    u8 result = (result >> 1) | (carry_flag << 7);
+    u8 result = (reg >> 1) | (carry_flag << 7);
     
     setCarryFlag(low_bit);
     setHalfCarryFlag(false);

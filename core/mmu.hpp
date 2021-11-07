@@ -1,14 +1,16 @@
 #pragma once
 
 #include "./util.hpp"
+#include "./cartridge.hpp"
 
 const u16 INPUT_ADDRESS = 0xFF00;
 const u16 DIV_ADDRESS = 0xFF04;
 const u16 TIMA_ADDRESS = 0xFF05;
 const u16 TMA_ADDRESS = 0xFF06;
 const u16 TAC_ADDRESS = 0xFF07;
-const u16 IE_ADDRESS = 0xFFFF;
+const u16 ENABLE_BOOT_ROM = 0xFF50;
 const u16 IF_ADDRESS = 0xFF0F;
+const u16 IE_ADDRESS = 0xFFFF;
 
 enum Button {
   RIGHT = 0,
@@ -23,7 +25,7 @@ enum Button {
 
 class MMU {
 public: 
-  MMU();
+  MMU(Cartridge cartridge);
   ~MMU();
 
   u8 read(u16 address);
@@ -34,6 +36,7 @@ public:
   void pressButton(Button button);
   void unpressButton(Button button);
 private:
+  Cartridge cartridge;
   // Array of size 0x10000 (Addresses 0x0 - 0xFFFF)
   // Some access rules: https://gbdev.io/pandocs/Memory_Map.html
   u8* memory; 

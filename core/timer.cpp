@@ -19,7 +19,7 @@ void Timer::step(u8 cpuCyclesElapsed) {
   }
 
   // TIMA counts conditionally and variably based on 0xFF07
-  if (timerEnabled) {
+  if (timerEnabled()) {
     u16 divisor = getDivisor();
     if (cyclesLeft >= divisor) {
       u8 timerCounter = mmu.read(TIMA_ADDRESS);
