@@ -1,15 +1,29 @@
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 
 #include <SDL2/SDL.h>
+
+#include "core/util.hpp"
 
 const char TITLE[] = "gb-emulator";
 const int WIDTH = 160;
 const int HEIGHT = 144;
 const double FPS = 60.0;
 
+const int BOOT_ROM_SIZE = 256;
+
+u8 *game_rom;
 SDL_Window *window;
 SDL_Renderer *renderer;
 SDL_Texture *texture;
+
+void free_game_rom(void) {
+	if (game_rom != nullptr) {
+		delete[] game_rom;
+		game_rom = nullptr;
+	}
+}
 
 void destroy_window(void) {
 	SDL_DestroyWindow(window);
@@ -23,7 +37,39 @@ void destroy_texture(void) {
 	SDL_DestroyTexture(texture);
 }
 
+void load_binary_file(char *filename, u8 *buffer, int file_size) {
+	std::ifstream file;
+
+	file.open(filename, std::ios::binary);
+
+	if (!file.is_open()) {
+		std::cerr << filename << ": " << strerror(errno) << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	file.read((char *) buffer, file_size);
+
+	file.close();
+}
+
 int main(int argc, char *argv[]) {
+	if (argc < 3) {
+		std::cerr << "Usage: " << argv[0] << " [boot_rom_file] [game_rom_file]" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	char *boot_rom_filename = argv[1];
+	char *game_rom_filename = argv[2];
+
+	u8 boot_rom[BOOT_ROM_SIZE] = {0};
+	load_binary_file(boot_rom_filename, boot_rom, BOOT_ROM_SIZE);
+
+	int game_rom_size = std::filesystem::file_size(game_rom_filename);
+	game_rom = new u8[game_rom_size];
+	load_binary_file(game_rom_filename, game_rom, game_rom_size);
+
+	atexit(free_game_rom);
+
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
 		std::cout << "Error initializing SDL: " << SDL_GetError();
 		exit(EXIT_FAILURE);
