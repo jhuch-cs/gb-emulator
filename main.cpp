@@ -1,9 +1,14 @@
 #include <fstream>
 #include <iostream>
+#include <cstring>
 
 #include <SDL2/SDL.h>
 
 #include "core/util.hpp"
+#include "core/cartridge.hpp"
+#include "core/mmu.hpp"
+#include "core/cpu.hpp"
+#include "core/ppu.hpp"
 
 const char TITLE[] = "gb-emulator";
 const int WIDTH = 160;
@@ -78,7 +83,7 @@ int main(int argc, char *argv[]) {
 	atexit(free_boot_rom);
 
 	load_binary_file(game_rom_filename, &game_rom);
-
+	
 	atexit(free_game_rom);
 
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -125,8 +130,15 @@ int main(int argc, char *argv[]) {
 
 	std::atexit(destroy_texture);
 
-	Uint32 pixels[WIDTH * HEIGHT] = {0};
+	Uint32 pixels[WIDTH * HEIGHT] = {};
 	int pixel_index = 0; // TODO: Remove this when connecting the pixel display to the emulator core.
+
+	Cartridge cartridge = Cartridge(game_rom_size);
+	memcpy(cartridge.gameRom, game_rom, game_rom_size);
+	memcpy(cartridge.bootRom, boot_rom, BOOT_ROM_SIZE);
+	MMU mmu = MMU(cartridge);
+	CPU cpu = CPU(mmu);
+	PPU ppu = PPU(mmu, cpu);
 
 	bool quit = false;
 	while (!quit) {
@@ -219,7 +231,6 @@ int main(int argc, char *argv[]) {
 						case SDL_SCANCODE_RETURN:
 						case SDL_SCANCODE_H: {
 						} break;
-
 						default: {
 						} break;
 					}
@@ -245,4 +256,5 @@ int main(int argc, char *argv[]) {
 
 		SDL_Delay(1000 / FPS);
 	}
+	return 0;
 }
