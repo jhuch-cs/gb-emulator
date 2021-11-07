@@ -1,7 +1,7 @@
 #pragma once
 
-#include "./cpu.hpp"
 #include "./mmu.hpp"
+#include "./cpu.hpp"
 #include "./util.hpp"
 
 enum Mode {
@@ -19,7 +19,7 @@ public:
   // During restricted modes, any attempt to read returns $FF, any attempt to write are ignored
   Mode mode;
 
-  PPU(CPU& cpu, MMU& mmu);
+  PPU(MMU& mmu, CPU& cpu);
 
   // Allow the PPU to cycle `cpuCyclesElapsed / 2` times per call
   void step(u8 cpuCyclesElapsed);

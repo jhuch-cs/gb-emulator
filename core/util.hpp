@@ -32,6 +32,14 @@ inline u8 getLowNibble(u8 value) {
   return value & 0x0F;
 }
 
+inline u8 setHighNibble(u8 dest, u8 highNibble) {
+  return (dest & 0x0F) | ((highNibble & 0xF) << 4);
+}
+
+inline u8 setLowNibble(u8 dest, u8 lowNibble) {
+  return (dest & 0xF0) | (lowNibble & 0xF);
+}
+
 inline u8 getHighByte(u16 value) {
     return ((value>>8) & 0xff);
 }
@@ -45,7 +53,7 @@ inline u8 setHighByte(u16* destination, u8 value){
   return *destination;
 }
 
-inline u8 setLowByte(u16* destination, u8 value){
+inline u8 setLowByte(u16* destination, u8 value) {
   *destination = (*destination & 0xff00) | value;
   return *destination;
 }
