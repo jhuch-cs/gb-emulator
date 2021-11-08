@@ -1,4 +1,3 @@
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 
@@ -11,12 +10,18 @@ const int WIDTH = 160;
 const int HEIGHT = 144;
 const double FPS = 60.0;
 
-const int BOOT_ROM_SIZE = 256;
-
+u8 *boot_rom;
 u8 *game_rom;
 SDL_Window *window;
 SDL_Renderer *renderer;
 SDL_Texture *texture;
+
+void free_boot_rom(void) {
+	if (boot_rom != nullptr) {
+		delete[] boot_rom;
+		boot_rom = nullptr;
+	}
+}
 
 void free_game_rom(void) {
 	if (game_rom != nullptr) {
@@ -37,19 +42,26 @@ void destroy_texture(void) {
 	SDL_DestroyTexture(texture);
 }
 
-void load_binary_file(char *filename, u8 *buffer, int file_size) {
+int load_binary_file(char *filename, u8 **buffer) {
 	std::ifstream file;
 
-	file.open(filename, std::ios::binary);
+	file.open(filename, std::ios::ate | std::ios::binary);
 
 	if (!file.is_open()) {
 		std::cerr << filename << ": " << strerror(errno) << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
-	file.read((char *) buffer, file_size);
+	int file_size = file.tellg();
+
+	*buffer = new u8[file_size];
+
+	file.seekg(0);
+	file.read((char *) *buffer, file_size);
 
 	file.close();
+
+	return file_size;
 }
 
 int main(int argc, char *argv[]) {
@@ -61,12 +73,11 @@ int main(int argc, char *argv[]) {
 	char *boot_rom_filename = argv[1];
 	char *game_rom_filename = argv[2];
 
-	u8 boot_rom[BOOT_ROM_SIZE] = {0};
-	load_binary_file(boot_rom_filename, boot_rom, BOOT_ROM_SIZE);
+	load_binary_file(boot_rom_filename, &boot_rom);
 
-	int game_rom_size = std::filesystem::file_size(game_rom_filename);
-	game_rom = new u8[game_rom_size];
-	load_binary_file(game_rom_filename, game_rom, game_rom_size);
+	atexit(free_boot_rom);
+
+	load_binary_file(game_rom_filename, &game_rom);
 
 	atexit(free_game_rom);
 
@@ -165,6 +176,9 @@ int main(int argc, char *argv[]) {
 							SDL_Event event = { .type = SDL_QUIT };
 							SDL_PushEvent(&event);
 						} break;
+
+						default: {
+						} break;
 					}
 				} break;
 
@@ -205,12 +219,18 @@ int main(int argc, char *argv[]) {
 						case SDL_SCANCODE_RETURN:
 						case SDL_SCANCODE_H: {
 						} break;
+
+						default: {
+						} break;
 					}
 				} break;
 
 				case SDL_QUIT: {
 					quit = true;
 				} break;
+
+				default: {
+				};
 			}
 		}
 
