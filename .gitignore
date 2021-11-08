@@ -9,4 +9,7 @@ gb-emulator.exe
 .DS_Store
 .vscode/
 debug.cpp
-
+gb_bios.bin
+Tetris.gb
+debug.exe
+build_debug.bat

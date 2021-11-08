@@ -1,14 +1,11 @@
-#pragma once
-
-#include "./util.hpp"
 #include "./ppu.hpp"
 
-PPU::PPU(CPU& cpu, MMU& mmu) {
-  this->cpu = cpu;
-  this->mmu = mmu;
+// Static for memory-stuff
+u8* PPU::frameBuffer = new u8[LCD_HEIGHT * LCD_WIDTH * 3];
+
+PPU::PPU(MMU& mmu, CPU& cpu) : mmu(mmu), cpu(cpu) {
   mode = OAM;
   cyclesLeft = 0;
-  frameBuffer = new u8[LCD_HEIGHT * LCD_WIDTH * 3];
 }
 
 // LCDC (0xFF40) - LCD Control
@@ -82,7 +79,6 @@ void PPU::step(u8 cpuCyclesElapsed) {
   cyclesLeft += cpuCyclesElapsed / 2;
 
   // switch based on current mode
-  // TODO: need a way to check interupts / set interupts for the CPU, maybe by public access to some methods in CPU..?
     // Bit 6 - LYC=LY STAT Interrupt source         (1=Enable) (Read/Write)
     // Bit 5 - Mode 2 OAM STAT Interrupt source     (1=Enable) (Read/Write)
     // Bit 4 - Mode 1 VBlank STAT Interrupt source  (1=Enable) (Read/Write)
@@ -132,6 +128,8 @@ void PPU::step(u8 cpuCyclesElapsed) {
         // check current scanline >= 144, then enter VBLANK, else enter OAM to prepare to draw another line
         if (scanline >= 144) {
           mode = VBLANK;
+          //Not sure if we request this here or at the start of VBLANK's `case` statement
+          cpu.requestInterrupt(VBLANK_INT); 
           u8 stat = get_stat();
           stat = setBit(stat, 0);
           stat = clearBit(stat, 1);
@@ -139,7 +137,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
 
           // VBLANK stat interrupt 
           if (checkBit(get_stat(), 4)) {
-            // TODO: signal cpu interrupt
+            cpu.requestInterrupt(Interrupt::LCD_STAT);
           }
         } else {
           mode = OAM;
@@ -150,7 +148,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
 
           // OAM stat interrupt
           if (checkBit(get_stat(), 5)) {
-            // TODO: signal cpu interrupt
+            cpu.requestInterrupt(Interrupt::LCD_STAT);
           }
         }
       }
@@ -180,7 +178,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
 
           // OAM stat interrupt
           if (checkBit(get_stat(), 5)) {
-            // TODO: signal cpu interrupt
+            cpu.requestInterrupt(Interrupt::LCD_STAT);
           }
         }
       }
@@ -197,7 +195,7 @@ void PPU::checkLYC(u8 scanline) {
 
     // LYC=LY stat interrupt
     if (checkBit(get_stat(), 6)) {
-      // TODO: signal cpu interrupt
+      cpu.requestInterrupt(Interrupt::LCD_STAT);
     }
   } else {
     stat = clearBit(stat, 2);
@@ -322,8 +320,8 @@ void PPU::renderTiles() {
   }
 }
 
-int PPU::getcolor(int id, u16 palette) {
-    u8 palette = mmu.read(palette);
+int PPU::getcolor(int id, u16 palette_address) {
+    u8 palette = mmu.read(palette_address);
     int hi = 2 * id + 1;
     int lo = 2 * id;
     int bit1 = (palette >> hi) & 1;
@@ -350,29 +348,29 @@ void PPU::renderSprites() {
 
   return; // TODO: implement sprite rendering
 
-  bool use8x16 = isObj8x16();
-  int objSize = use8x16 ? 16 : 8;
+  // bool use8x16 = isObj8x16();
+  // int objSize = use8x16 ? 16 : 8;
 
-  // can render up to 40 sprites, iterate through OAM table
-  for (int i = 0; i < 40; i++) {
-    u8 spriteIndex = i*4;
-    u8 yPos = mmu.read(OAM_TABLE + spriteIndex) - 16;
-    u8 xPos = mmu.read(OAM_TABLE + spriteIndex + 1) - 8;
-    u8 tileIndex = mmu.read(OAM_TABLE + spriteIndex + 2);
-    u8 attr = mmu.read(OAM_TABLE + spriteIndex + 3);
+  // // can render up to 40 sprites, iterate through OAM table
+  // for (int i = 0; i < 40; i++) {
+  //   u8 spriteIndex = i*4;
+  //   u8 yPos = mmu.read(OAM_TABLE + spriteIndex) - 16;
+  //   u8 xPos = mmu.read(OAM_TABLE + spriteIndex + 1) - 8;
+  //   u8 tileIndex = mmu.read(OAM_TABLE + spriteIndex + 2);
+  //   u8 attr = mmu.read(OAM_TABLE + spriteIndex + 3);
 
-    // check sprite attributes
-    const bool bgOverObj = checkBit(attr, 7);
-    const bool yFlip = checkBit(attr, 6);
-    const bool xFlip = checkBit(attr, 5);
-    const u16 pallete = checkBit(attr, 4) ? OBP1 : OBP0;
+  //   // check sprite attributes
+  //   const bool bgOverObj = checkBit(attr, 7);
+  //   const bool yFlip = checkBit(attr, 6);
+  //   const bool xFlip = checkBit(attr, 5);
+  //   const u16 pallete = checkBit(attr, 4) ? OBP1 : OBP0;
 
-    // get current scanline
-    u8 scanline = get_ly();
+  //   // get current scanline
+  //   u8 scanline = get_ly();
 
-    // draw row of pixels in sprite if sprite intercepts scanline
-    if (scanline >= yPos && scanline < (yPos + objSize)) {
+  //   // draw row of pixels in sprite if sprite intercepts scanline
+  //   if (scanline >= yPos && scanline < (yPos + objSize)) {
 
-    }
-  }
+  //   }
+  // }
 }

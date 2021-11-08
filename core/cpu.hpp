@@ -3,6 +3,15 @@
 #include "./mmu.hpp"
 #include "./util.hpp"
 
+enum Interrupt {
+  VBLANK_INT   = 0, //avoid conflict with Mode::VBLANK
+  LCD_STAT = 1,
+  TIMER    = 2,
+  SERIAL   = 3,
+  INPUT    = 4, //ie JOYPAD
+  NONE     = -1,
+};
+
 class CPU {
 public: 
   // At construction time, `exec` the boot rom
@@ -21,6 +30,9 @@ public:
   // Rely on the `pc` for the exec location
   u8 exec();
 
+  u8 handleInterrupts();
+  void requestInterrupt(Interrupt interrupt);
+  void acknowledgeInterrupt(Interrupt interrupt);
  private:
   MMU mmu;
   // Registers
@@ -33,6 +45,11 @@ public:
   // Special Registers
   // `sp` is stack pointer, `pc` is program counter
   u16 sp, pc;
+
+  // IME is the Interrupt Master Enable flag
+  bool ime = false;
+  Interrupt checkInterrupts();
+  u16 getInterruptVector(Interrupt interrupt);
 
   u8 execCB();
 
@@ -54,6 +71,9 @@ public:
   u8 op_rl(u8 reg);
   u8 op_rrc(u8 reg);
   u8 op_rr(u8 reg);
+
+  void pushToStack(u16 value);
+  u16 popFromStack();
   
   bool readCarryFlag();
   bool readHalfCarryFlag();

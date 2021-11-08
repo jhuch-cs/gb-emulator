@@ -1,1 +1,1 @@
-g++ -std=c++17 main.cpp -ISDL2\include -LSDL2\lib -Wall -lmingw32 -lSDL2main -lSDL2 -o gb-emulator
+g++ -std=c++17 main.cpp .\core\cartridge.cpp .\core\cpu.cpp .\core\mmu.cpp .\core\ppu.cpp .\core\timer.cpp .\core\util.hpp -ISDL2\include -LSDL2\lib -Wall -lmingw32 -lSDL2main -lSDL2 -o gb-emulator
