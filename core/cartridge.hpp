@@ -2,8 +2,8 @@
 
 #include "./util.hpp"
 
-const u8 BOOT_ROM_SIZE = (u8)0x100;
-const u8 BANK_SIZE = (u8)32768; //32 kB
+const u16 BOOT_ROM_SIZE = 0x100;
+const u16 BANK_SIZE = 32768; //32 kB
 
 class Cartridge {
 public:
