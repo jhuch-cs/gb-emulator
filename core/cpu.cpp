@@ -881,7 +881,7 @@ u8 CPU::exec(){
             //XOR d8
             //A=A xor n
             u8 n = mmu.read(pc++);
-            setHighByte(&af, op_or(getHighByte(af), n));
+            setHighByte(&af, op_xor(getHighByte(af), n));
             return 8;
         }
         case 0xF0: {
@@ -914,7 +914,7 @@ u8 CPU::exec(){
         }
         case 0xF8: {
             //LD HL, SP + r8
-            u8 valueToAdd = mmu.read(pc++);
+            s8 valueToAdd = mmu.read(pc++);
             hl = op_add(sp, valueToAdd);
             return 12;
         }
