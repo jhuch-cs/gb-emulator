@@ -270,6 +270,7 @@ u8 CPU::exec(){
             return 4;
         }
         case 0x08: {
+            //LD (a16),SP
             u16 immediate_address = mmu.read16Bit(pc++);
             pc++;
             mmu.write(immediate_address, getLowByte(sp));
@@ -399,25 +400,29 @@ u8 CPU::exec(){
         }
         case 0xFE: {
             //CP d8
-            //CP is a subtraction from A that doesn't update A, only the flags it would have set/reset if it really was subtracted.
             u8 n = mmu.read(pc++);
             u8 a = getHighByte(af);
-            u8 compare = a - n;
+            op_cp(a, n);
 
-            setSubtractFlag(true);
-            setCarryFlag(compare < 0);
-            setZeroFlag(compare == 0);
-
-            //TODO: need to look up when to set half cary flag
-            break;
+            return 8;
         }
         case 0xE2: {
             //LD (C),A same as LD($FF00+C),A
             mmu.write(getLowByte(bc) + 0xFF00, getHighByte(af));
-            // sleep?
-            cycles = 8;
-            break;
+            return 8;
         }
+        case 0xC5: case 0xD5: case 0xE5: case 0xF5: {
+            //PUSH rr
+            u16* rr = get16BitRegisterFromEncoding(getHighNibble(opCode));
+            pushToStack(*rr);
+            return 16;
+        }
+        case 0xC1: case 0xD1: case 0xE1: case 0xF1: {
+            //POP rr
+            u16* rr = get16BitRegisterFromEncoding(getHighNibble(opCode));
+            *rr = popFromStack();
+            return 12;
+        } 
         case 0x76: {
             //HALT
             //TODO: Suspend until an interrupt occurs
@@ -583,21 +588,12 @@ u8 CPU::exec(){
         case 0xC0: {
             //RET NZ
             if(readSubtractFlag() & readZeroFlag()){
-                pc = mmu.read(sp);
-                sp++;
-                sp++;
+                pc = popFromStack();
                 return 20;
             }
             else{
                 return 8;
             }
-        }
-        case 0xC1: {
-            //POP BC
-            bc = mmu.read(sp);
-            sp++;
-            sp++;
-            return 12;
         }
         case 0xC2: {
             //JP NZ, a16
@@ -632,10 +628,7 @@ u8 CPU::exec(){
             pc++;
 
             if(readZeroFlag() & readSubtractFlag()){
-                sp--;
-                sp--;
-                mmu.write(sp, pc);
-
+                pushToStack(pc);
                 pc = nn_nn;
                 return 24;
             }
@@ -643,34 +636,22 @@ u8 CPU::exec(){
                 return 12;
             }
         }
-        case 0xC5: {
-            //PUSH BC
-            sp--;
-            sp--;
-
-            mmu.write(sp, bc);
-            return 16;
-        }
         case 0xC6: {
             //ADD A, d8
             return 4;
         }
-        case 0xC7, 0xCF, 0xD7, 0xDF, 0xE7, 0xEF, 0xF7, 0xFF: {
+        case 0xC7: case 0xCF: case 0xD7: case 0xDF: case 0xE7: case 0xEF: case 0xF7: case 0xFF: {
             //RST 00H, 08H, 10H, 18H, 20H, 28H, 30H, 38H
-            sp--;
-            sp--;
-            mmu.write(sp, pc);
+            pushToStack(pc);
 
-            call_value = (opCode-0xC7);
+            u8 call_value = (opCode-0xC7);
             pc = call_value;
             return 16;
         }
         case 0xC8: {
             //RET Z
             if(readZeroFlag()){
-                pc = mmu.read(sp);
-                sp++;
-                sp++;
+                pc = popFromStack();
                 return 20;
             }
             else{
@@ -679,7 +660,8 @@ u8 CPU::exec(){
         }
         case 0xC9: {
             //RET
-            return 4;
+            pc = popFromStack();
+            return 16;
         }
         case 0xCA: {
             //JP Z, a16
@@ -708,9 +690,7 @@ u8 CPU::exec(){
             pc++;
 
             if(readZeroFlag()){
-                sp--;
-                sp--;
-                mmu.write(sp, pc);
+                pushToStack(pc);
 
                 pc = nn_nn;
                 return 24;
@@ -722,10 +702,7 @@ u8 CPU::exec(){
         }
         case 0xCD: {
             //CALL a16
-            sp--;
-            sp--;
-            mmu.write(sp, pc);
-
+            pushToStack(pc);
             
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
             u16 nn_nn = mmu.read16Bit(pc++);
@@ -740,21 +717,12 @@ u8 CPU::exec(){
         case 0xD0: {
             //RET NC
             if(readCarryFlag() & readSubtractFlag()){
-                pc = mmu.read(sp);
-                sp++;
-                sp++;
+                pc = popFromStack();
                 return 20;
             }
             else{
                 return 8;
             }
-        }
-        case 0xD1: {
-            //POP DE
-            de = mmu.read(sp);
-            sp++;
-            sp++;
-            return 12;
         }
         case 0xD2: {
             //JP NC, a16
@@ -779,9 +747,7 @@ u8 CPU::exec(){
             pc++;
 
             if(readCarryFlag() & readSubtractFlag()){
-                sp--;
-                sp--;
-                mmu.write(sp, pc);
+                pushToStack(pc);
 
                 pc = nn_nn;
                 return 24;
@@ -791,14 +757,6 @@ u8 CPU::exec(){
             }
             return 4;
         }
-        case 0xD5: {
-            //PUSH DE
-            sp--;
-            sp--;
-
-            mmu.write(sp, de);
-            return 16;
-        }
         case 0xD6: {
             //SUB d8
             return 4;
@@ -806,9 +764,7 @@ u8 CPU::exec(){
         case 0xD8: {
             //RET C
             if(readCarryFlag()){
-                pc = mmu.read(sp);
-                sp++;
-                sp++;
+                pc = popFromStack();
                 return 20;
             }
             else{
@@ -818,9 +774,7 @@ u8 CPU::exec(){
         case 0xD9: {
             //RETI
             //return, PC=(SP), SP=SP+2
-            pc = mmu.read(sp);
-            sp++;
-            sp++;
+            pc = popFromStack();
 
             //enable interrupts (IME=1)
             /************************NOT SURE HOW TO ENABLE INTERRUPTS*********************/
@@ -849,10 +803,7 @@ u8 CPU::exec(){
             pc++;
 
             if(readCarryFlag()){
-                sp--;
-                sp--;
-                mmu.write(sp, pc);
-
+                pushToStack(pc);
                 pc = nn_nn;
                 return 24;
             }
@@ -871,25 +822,9 @@ u8 CPU::exec(){
         }
         case 0xE0: {
             //LDH (a8), A aka LD ($FF00+a8), A
-            u8 input = mmu.read16Bit(pc++);
-            pc++;
-            mmu.write(input, getHighByte(af));
-            return 16;
-        }
-        case 0xE1: {
-            //POP HL
-            hl = mmu.read(sp);
-            sp++;
-            sp++;
+            u8 input = mmu.read(pc++);
+            mmu.write(0xFF00 + input, getHighByte(af));
             return 12;
-        }
-        case 0xE5: {
-            //PUSH HL
-            sp--;
-            sp--;
-
-            mmu.write(sp, hl);
-            return 16;
         }
         case 0xE6: {
             //AND d8
@@ -902,7 +837,7 @@ u8 CPU::exec(){
             //ADD SP, r8
             //SP = SP +/- dd ; dd is 8-bit signed number
             s8 num = mmu.read(pc++);
-            pc = op_add(sp, num));
+            pc = op_add(sp, num);
             return 16;
         }
         case 0xE9: {
@@ -932,13 +867,6 @@ u8 CPU::exec(){
             setHighByte(&af, (mmu.read(0xFF00+input)));
             return 12;
         }
-        case 0xF1: {
-            //POP AF
-            af = mmu.read(sp);
-            sp++;
-            sp++;
-            return 12;
-        }
         case 0xF2: {
             //ld A,(FF00+C)
             u8 c = getLowByte(bc);
@@ -950,14 +878,6 @@ u8 CPU::exec(){
             //disable interrupts, IME=0
             /*******************NOT SURE HOW TO DO THIS*******************/
             return 4;
-        }
-        case 0xF5: {
-            //PUSH AF
-            sp--;
-            sp--;
-
-            mmu.write(sp, af);
-            return 16;
         }
         case 0xF6: {
             //OR d8
