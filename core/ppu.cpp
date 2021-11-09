@@ -62,7 +62,7 @@ u16 PPU::windowTileMapArea() { return checkBit(get_lcdc(), 6) ? 0x9C00 : 0x9800;
 // Bit 5	Window enable	0=Off, 1=On
 bool PPU::isWindowEnabled() { return checkBit(get_lcdc(), 5); }
 // Bit 4	BG and Window tile data area	0=8800-97FF, 1=8000-8FFF
-u16 PPU::tileDataArea() { return checkBit(get_lcdc(), 4) ? 0x800 : 0x8800; }
+u16 PPU::tileDataArea() { return checkBit(get_lcdc(), 4) ? 0x8000 : 0x8800; }
 // Bit 3	BG tile map area	0=9800-9BFF, 1=9C00-9FFF
 u16 PPU::bgTileMapArea() { return checkBit(get_lcdc(), 3) ? 0x9C00 : 0x9800; }
 // Bit 2	OBJ size	0=8x8, 1=8x16
@@ -74,7 +74,7 @@ bool PPU::isBgWinEnabled() { return checkBit(get_lcdc(), 0); }
 
 void PPU::step(u8 cpuCyclesElapsed) {
 
-  // if (!isLCDEnabled()) { return; }
+  if (!isLCDEnabled()) { return; }
 
   cyclesLeft += cpuCyclesElapsed / 2;
 
