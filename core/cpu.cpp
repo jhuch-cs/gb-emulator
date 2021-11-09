@@ -9,6 +9,9 @@ const u8 subtraction_flag_index = 6;
 const u8 half_carry_flag_index = 5;
 const u8 carry_flag_index = 4;
 
+static bool ime;
+static bool halted = false;
+
 
 CPU::CPU(MMU& mmu) : mmu(mmu) {   
     //setting the pc to start where the boot rom is located
@@ -24,6 +27,10 @@ CPU::CPU(MMU& mmu) : mmu(mmu) {
 
 u8 CPU::step(){
     u8 cyclesFromInterrupts = handleInterrupts();
+    if (halted)
+    {
+        return 4;
+    }
     u8 cyclesFromOpCode = exec();
     return cyclesFromInterrupts + cyclesFromOpCode;
 }
@@ -39,6 +46,7 @@ u8 CPU::handleInterrupts() {
         pc = getInterruptVector(requested_interrupt);
         return 20;
     }
+    halted = false;
     
     return 0;
 }
@@ -110,6 +118,7 @@ u8 CPU::exec(){
         case 0x10: {
             //STOP
             //TODO: Set some interrupt to pause execution until button press?
+            pc++;
             return 4;
         }
         case 0x20: {
@@ -426,6 +435,10 @@ u8 CPU::exec(){
         case 0x76: {
             //HALT
             //TODO: Suspend until an interrupt occurs
+            halted = ime;
+            // halted = ime || There is a flag set for an interrupt and also an interrupt enabled in the register
+            // (i.e. an action is flagged and enabled. This causes the execution to stop to allow for that action
+            // until it is completed and the disable interrupt dude is called...)
             return 4;
         }
         case 0x46: case 0x4E: case 0x56: case 0x5E: 
@@ -638,6 +651,11 @@ u8 CPU::exec(){
         }
         case 0xC6: {
             //ADD A, d8
+            u8 n = mmu.read(pc++);
+            u8 a = getHighByte(af);
+            u8 result = op_add(a, n);
+            setHighByte(&af, result);
+
             return 4;
         }
         case 0xC7: case 0xCF: case 0xD7: case 0xDF: case 0xE7: case 0xEF: case 0xF7: case 0xFF: {
@@ -712,6 +730,10 @@ u8 CPU::exec(){
         }
         case 0xCE: {
             //ADC A, d8
+            u8 n = mmu.read(pc++);
+            u8 a = getHighByte(af);
+            u8 result = op_adc(a, n);
+            setHighByte(&af, result);
             return 4;
         }
         case 0xD0: {
@@ -759,6 +781,10 @@ u8 CPU::exec(){
         }
         case 0xD6: {
             //SUB d8
+            u8 n = mmu.read(pc++);
+            u8 a = getHighByte(af);
+            u8 result = op_sub(a, n);
+            setHighByte(&af, result);
             return 4;
         }
         case 0xD8: {
@@ -775,7 +801,7 @@ u8 CPU::exec(){
             //RETI
             //return, PC=(SP), SP=SP+2
             pc = popFromStack();
-
+            ime = 1;
             //enable interrupts (IME=1)
             /************************NOT SURE HOW TO ENABLE INTERRUPTS*********************/
             return 16;
@@ -877,6 +903,7 @@ u8 CPU::exec(){
             //DI
             //disable interrupts, IME=0
             /*******************NOT SURE HOW TO DO THIS*******************/
+            ime = 0;
             return 4;
         }
         case 0xF6: {
@@ -914,6 +941,7 @@ u8 CPU::exec(){
             //EI
             //enable interrupts, IME=1
             /*******************NOT SURE HOW TO DO THIS*******************/
+            ime = 1;
             return 4;
         }
     }
