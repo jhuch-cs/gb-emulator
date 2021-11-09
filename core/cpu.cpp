@@ -9,9 +9,6 @@ const u8 subtraction_flag_index = 6;
 const u8 half_carry_flag_index = 5;
 const u8 carry_flag_index = 4;
 
-static bool ime;
-static bool halted = false;
-
 
 CPU::CPU(MMU& mmu) : mmu(mmu) {   
     //setting the pc to start where the boot rom is located
@@ -801,7 +798,7 @@ u8 CPU::exec(){
             //RETI
             //return, PC=(SP), SP=SP+2
             pc = popFromStack();
-            ime = 1;
+            ime = true;
             //enable interrupts (IME=1)
             /************************NOT SURE HOW TO ENABLE INTERRUPTS*********************/
             return 16;
@@ -903,7 +900,7 @@ u8 CPU::exec(){
             //DI
             //disable interrupts, IME=0
             /*******************NOT SURE HOW TO DO THIS*******************/
-            ime = 0;
+            ime = false;
             return 4;
         }
         case 0xF6: {
@@ -941,7 +938,7 @@ u8 CPU::exec(){
             //EI
             //enable interrupts, IME=1
             /*******************NOT SURE HOW TO DO THIS*******************/
-            ime = 1;
+            ime = true;
             return 4;
         }
     }
