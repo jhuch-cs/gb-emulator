@@ -33,7 +33,7 @@ inline u8 getLowNibble(u8 value) {
 }
 
 inline u8 setHighNibble(u8 dest, u8 highNibble) {
-  return (dest & 0x0F) | ((highNibble & 0xF) << 4);
+  return (dest & 0x0F) | (highNibble & 0xF0);
 }
 
 inline u8 setLowNibble(u8 dest, u8 lowNibble) {

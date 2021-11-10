@@ -10,6 +10,6 @@ gb-emulator.exe
 .vscode/
 debug.cpp
 gb_bios.bin
-Tetris.gb
+*.gb
 debug.exe
 build_debug.bat

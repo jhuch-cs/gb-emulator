@@ -74,7 +74,9 @@ bool PPU::isBgWinEnabled() { return checkBit(get_lcdc(), 0); }
 
 void PPU::step(u8 cpuCyclesElapsed) {
 
-  if (!isLCDEnabled()) { return; }
+  if (!isLCDEnabled()) { 
+    return; 
+  }
 
   cyclesLeft += cpuCyclesElapsed / 2;
 

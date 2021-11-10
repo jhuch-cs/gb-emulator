@@ -6,10 +6,11 @@ bool checkAddressIsValid(u16 address) {
     return address >= 0x0000 && address <= 0xffff;
 }
 
-MMU::MMU(Cartridge cartridge) : cartridge(cartridge) {
+MMU::MMU(Cartridge& cartridge) : cartridge(cartridge) {
     memory = new u8[0x10000];
     memcpy(memory, cartridge.gameRom, cartridge.gameRomSize);
     memcpy(memory, cartridge.bootRom, BOOT_ROM_SIZE);
+    memory[INPUT_ADDRESS] = 0xFF; // Input starts high, since high = unpressed
 }
 
 MMU::~MMU() {
