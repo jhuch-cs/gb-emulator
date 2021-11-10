@@ -774,7 +774,7 @@ u8 CPU::exec(){
             else{
                 return 12;
             }
-            return 4;
+            // return 4;
         }
         case 0xD6: {
             //SUB d8
