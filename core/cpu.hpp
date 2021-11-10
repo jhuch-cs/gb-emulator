@@ -48,6 +48,7 @@ public:
 
   // IME is the Interrupt Master Enable flag
   bool ime = false;
+  bool halted = false;
   Interrupt checkInterrupts();
   u16 getInterruptVector(Interrupt interrupt);
 
