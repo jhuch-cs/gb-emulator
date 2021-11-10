@@ -597,27 +597,24 @@ u8 CPU::exec(){
         }
         case 0xC0: {
             //RET NZ
-            if(readSubtractFlag() & readZeroFlag()){
+            if (!readZeroFlag()) {
                 pc = popFromStack();
                 return 20;
-            }
-            else{
+            } else {
                 return 8;
             }
         }
         case 0xC2: {
             //JP NZ, a16
-            //check if subtraction flag(n) & zero flags are set
 
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
             u16 nn_nn = mmu.read16Bit(pc++);
             pc++;
 
-            if(readZeroFlag() & readSubtractFlag()){
+            if (!readZeroFlag()) {
                 pc = nn_nn;
                 return 16;
-            }
-            else{
+            } else {
                 return 12;
             }
         }
@@ -631,18 +628,15 @@ u8 CPU::exec(){
         }
         case 0xC4: {
             //CALL NZ, a16
-            //check if subtraction flag(n) & zero flags are set
-
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
             u16 nn_nn = mmu.read16Bit(pc++);
             pc++;
 
-            if(readZeroFlag() & readSubtractFlag()){
+            if (!readZeroFlag()) {
                 pushToStack(pc);
                 pc = nn_nn;
                 return 24;
-            }
-            else{
+            } else {
                 return 12;
             }
         }
@@ -665,11 +659,10 @@ u8 CPU::exec(){
         }
         case 0xC8: {
             //RET Z
-            if(readZeroFlag()){
+            if (readZeroFlag()) {
                 pc = popFromStack();
                 return 20;
-            }
-            else{
+            } else {
                 return 8;
             }
         }
@@ -684,11 +677,10 @@ u8 CPU::exec(){
             u16 nn_nn = mmu.read16Bit(pc++);
             pc++;
 
-            if(readZeroFlag()){
+            if (readZeroFlag()) {
                 pc = nn_nn;
                 return 16;
-            }
-            else{
+            } else {
                 return 12;
             }
         }
@@ -704,24 +696,20 @@ u8 CPU::exec(){
             u16 nn_nn = mmu.read16Bit(pc++);
             pc++;
 
-            if(readZeroFlag()){
+            if (readZeroFlag()) {
                 pushToStack(pc);
 
                 pc = nn_nn;
                 return 24;
-            }
-            else{
+            } else {
                 return 12;
             }
-            return 4;
         }
         case 0xCD: {
             //CALL a16
-            pushToStack(pc);
-            
-            //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
             u16 nn_nn = mmu.read16Bit(pc++);
             pc++;
+            pushToStack(pc);
             pc = nn_nn;
             return 24; 
         }
@@ -735,11 +723,10 @@ u8 CPU::exec(){
         }
         case 0xD0: {
             //RET NC
-            if(readCarryFlag() & readSubtractFlag()){
+            if (!readCarryFlag()){
                 pc = popFromStack();
                 return 20;
-            }
-            else{
+            } else {
                 return 8;
             }
         }
@@ -749,11 +736,10 @@ u8 CPU::exec(){
             u16 nn_nn = mmu.read16Bit(pc++);
             pc++;
 
-            if(readCarryFlag() & readSubtractFlag()){
+            if (!readCarryFlag()) {
                 pc = nn_nn;
                 return 16;
-            }
-            else{
+            } else {
                 return 12;
             }
         }
@@ -765,16 +751,14 @@ u8 CPU::exec(){
             u16 nn_nn = mmu.read16Bit(pc++);
             pc++;
 
-            if(readCarryFlag() & readSubtractFlag()){
+            if (!readCarryFlag()) {
                 pushToStack(pc);
 
                 pc = nn_nn;
                 return 24;
-            }
-            else{
+            } else {
                 return 12;
             }
-            // return 4;
         }
         case 0xD6: {
             //SUB d8
@@ -786,11 +770,10 @@ u8 CPU::exec(){
         }
         case 0xD8: {
             //RET C
-            if(readCarryFlag()){
+            if (readCarryFlag()) {
                 pc = popFromStack();
                 return 20;
-            }
-            else{
+            } else {
                 return 8;
             }
         }
@@ -799,8 +782,6 @@ u8 CPU::exec(){
             //return, PC=(SP), SP=SP+2
             pc = popFromStack();
             ime = true;
-            //enable interrupts (IME=1)
-            /************************NOT SURE HOW TO ENABLE INTERRUPTS*********************/
             return 16;
         }
         case 0xDA: {
@@ -809,11 +790,10 @@ u8 CPU::exec(){
             u16 nn_nn = mmu.read16Bit(pc++);
             pc++;
 
-            if(readCarryFlag()){
+            if (readCarryFlag()) {
                 pc = nn_nn;
                 return 16;
-            }
-            else{
+            } else {
                 return 12;
             }
         }
@@ -825,12 +805,11 @@ u8 CPU::exec(){
             u16 nn_nn = mmu.read16Bit(pc++);
             pc++;
 
-            if(readCarryFlag()){
+            if (readCarryFlag()) {
                 pushToStack(pc);
                 pc = nn_nn;
                 return 24;
-            }
-            else{
+            } else {
                 return 12;
             }
         }
@@ -898,8 +877,6 @@ u8 CPU::exec(){
         }
         case 0xF3: {
             //DI
-            //disable interrupts, IME=0
-            /*******************NOT SURE HOW TO DO THIS*******************/
             ime = false;
             return 4;
         }
@@ -936,10 +913,11 @@ u8 CPU::exec(){
         }
         case 0xFB: {
             //EI
-            //enable interrupts, IME=1
-            /*******************NOT SURE HOW TO DO THIS*******************/
             ime = true;
             return 4;
+        }
+        default: {
+            std::cout << "Attempted to execute illegal opcode: " << opCode << std::endl;
         }
     }
 

@@ -25,7 +25,7 @@ enum Button {
 
 class MMU {
 public: 
-  MMU(Cartridge cartridge);
+  MMU(Cartridge& cartridge);
   ~MMU();
 
   u8 read(u16 address);
