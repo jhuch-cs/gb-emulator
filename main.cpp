@@ -14,7 +14,7 @@
 const char TITLE[] = "gb-emulator";
 const int WIDTH = 160;
 const int HEIGHT = 144;
-const int NUM_PIXELS = 3 * 144 * 160;
+const int NUM_BYTES_OF_PIXELS = 3 * 144 * 160;
 const double FPS = 60.0;
 
 
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
 
 	std::atexit(destroy_texture);
 
-	u8 pixels[NUM_PIXELS] = {};
+	u8 pixels[NUM_BYTES_OF_PIXELS] = {};
 
 	Cartridge cartridge = Cartridge(game_rom_size);
 	memcpy(cartridge.gameRom, game_rom, game_rom_size);
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
 			ppu.step(cycles);
 		}
 		
-		memcpy(pixels, ppu.getFrameBuffer(), NUM_PIXELS);
+		memcpy(pixels, ppu.getFrameBuffer(), NUM_BYTES_OF_PIXELS);
 
 		SDL_RenderClear(renderer);
 		SDL_UpdateTexture(texture, nullptr, pixels, WIDTH * sizeof(u8) * 3);
