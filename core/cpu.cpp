@@ -850,7 +850,7 @@ u8 CPU::exec(){
         }
         case 0xEA: {
             //LD (a16), A
-            u16 addressToWrite = mmu.read(pc++);
+            u16 addressToWrite = mmu.read16Bit(pc++);
             pc++;
 
             mmu.write(addressToWrite, getHighByte(af));
