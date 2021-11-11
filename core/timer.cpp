@@ -1,5 +1,3 @@
-#pragma once
-
 #include "./mmu.hpp"
 #include "./timer.hpp"
 #include "./util.hpp"

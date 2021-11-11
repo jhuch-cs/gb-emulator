@@ -1,14 +1,24 @@
 #include <fstream>
 #include <iostream>
+#include <cstring>
 
 #include <SDL2/SDL.h>
 
 #include "core/util.hpp"
+#include "core/cartridge.hpp"
+#include "core/mmu.hpp"
+#include "core/cpu.hpp"
+#include "core/ppu.hpp"
+#include "core/timer.hpp"
 
 const char TITLE[] = "gb-emulator";
 const int WIDTH = 160;
 const int HEIGHT = 144;
+const int NUM_BYTES_OF_PIXELS = 3 * 144 * 160;
 const double FPS = 60.0;
+
+
+const int MAX_CYCLES_PER_FRAME = 69905;
 
 u8 *boot_rom;
 u8 *game_rom;
@@ -77,8 +87,8 @@ int main(int argc, char *argv[]) {
 
 	atexit(free_boot_rom);
 
-	load_binary_file(game_rom_filename, &game_rom);
-
+	u32 game_rom_size = load_binary_file(game_rom_filename, &game_rom);
+	
 	atexit(free_game_rom);
 
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
@@ -114,7 +124,7 @@ int main(int argc, char *argv[]) {
 
 	std::atexit(destroy_renderer);
 
-	Uint32 texture_format = SDL_PIXELFORMAT_ARGB8888;
+	Uint32 texture_format = SDL_PIXELFORMAT_RGB24;
 	int texture_access = SDL_TEXTUREACCESS_STATIC;
 	texture = SDL_CreateTexture(renderer, texture_format, texture_access, WIDTH, HEIGHT);
 
@@ -125,8 +135,15 @@ int main(int argc, char *argv[]) {
 
 	std::atexit(destroy_texture);
 
-	Uint32 pixels[WIDTH * HEIGHT] = {0};
-	int pixel_index = 0; // TODO: Remove this when connecting the pixel display to the emulator core.
+	u8 pixels[NUM_BYTES_OF_PIXELS] = {};
+
+	Cartridge cartridge = Cartridge(game_rom_size);
+	memcpy(cartridge.gameRom, game_rom, game_rom_size);
+	memcpy(cartridge.bootRom, boot_rom, BOOT_ROM_SIZE);
+	MMU mmu = MMU(cartridge);
+	CPU cpu = CPU(mmu);
+	Timer timer = Timer(mmu, cpu);
+	PPU ppu = PPU(mmu, cpu);
 
 	bool quit = false;
 	while (!quit) {
@@ -138,38 +155,46 @@ int main(int argc, char *argv[]) {
 					switch (event.key.keysym.scancode) {
 						case SDL_SCANCODE_UP:
 						case SDL_SCANCODE_W: {
+							mmu.pressButton(UP);
 						} break;
 
 						case SDL_SCANCODE_LEFT:
 						case SDL_SCANCODE_A: {
+							mmu.pressButton(LEFT);
 						} break;
 
 						case SDL_SCANCODE_DOWN:
 						case SDL_SCANCODE_S: {
+							mmu.pressButton(DOWN);
 						} break;
 
 						case SDL_SCANCODE_RIGHT:
 						case SDL_SCANCODE_D: {
+							mmu.pressButton(RIGHT);
 						} break;
 
 						// B
 						case SDL_SCANCODE_Z:
 						case SDL_SCANCODE_J: {
+							mmu.pressButton(B);
 						} break;
 
 						// A
 						case SDL_SCANCODE_X:
 						case SDL_SCANCODE_K: {
+							mmu.pressButton(A);
 						} break;
 
 						// Select
 						case SDL_SCANCODE_RSHIFT:
 						case SDL_SCANCODE_G: {
+							mmu.pressButton(SELECT);
 						} break;
 
 						// Start
 						case SDL_SCANCODE_RETURN:
 						case SDL_SCANCODE_H: {
+							mmu.pressButton(START);
 						} break;
 
 						case SDL_SCANCODE_ESCAPE: {
@@ -186,40 +211,47 @@ int main(int argc, char *argv[]) {
 					switch (event.key.keysym.scancode) {
 						case SDL_SCANCODE_UP:
 						case SDL_SCANCODE_W: {
+							mmu.unpressButton(UP);
 						} break;
 
 						case SDL_SCANCODE_LEFT:
 						case SDL_SCANCODE_A: {
+							mmu.unpressButton(LEFT);
 						} break;
 
 						case SDL_SCANCODE_DOWN:
 						case SDL_SCANCODE_S: {
+							mmu.unpressButton(DOWN);
 						} break;
 
 						case SDL_SCANCODE_RIGHT:
 						case SDL_SCANCODE_D: {
+							mmu.unpressButton(RIGHT);
 						} break;
 
 						// B
 						case SDL_SCANCODE_Z:
 						case SDL_SCANCODE_J: {
+							mmu.unpressButton(B);
 						} break;
 
 						// A
 						case SDL_SCANCODE_X:
 						case SDL_SCANCODE_K: {
+							mmu.unpressButton(A);
 						} break;
 
 						// Select
 						case SDL_SCANCODE_RSHIFT:
 						case SDL_SCANCODE_G: {
+							mmu.unpressButton(SELECT);
 						} break;
 
 						// Start
 						case SDL_SCANCODE_RETURN:
 						case SDL_SCANCODE_H: {
+							mmu.unpressButton(START);
 						} break;
-
 						default: {
 						} break;
 					}
@@ -234,15 +266,23 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		// TODO: Remove these when connecting the pixel display to the emulator core.
-		pixels[pixel_index] ^= 0x00FFFFFF;
-		pixel_index = (pixel_index + 7) % (WIDTH * HEIGHT);
+		int cyclesThisFrame = 0;
+
+		while (cyclesThisFrame < MAX_CYCLES_PER_FRAME) {
+			int cycles = cpu.step();
+			cyclesThisFrame += cycles;
+			timer.step(cycles);
+			ppu.step(cycles);
+		}
+		
+		memcpy(pixels, ppu.getFrameBuffer(), NUM_BYTES_OF_PIXELS);
 
 		SDL_RenderClear(renderer);
-		SDL_UpdateTexture(texture, nullptr, pixels, WIDTH * sizeof(Uint32));
+		SDL_UpdateTexture(texture, nullptr, pixels, WIDTH * sizeof(u8) * 3);
 		SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 		SDL_RenderPresent(renderer);
 
 		SDL_Delay(1000 / FPS);
 	}
+	return 0;
 }
