@@ -53,6 +53,13 @@ void MMU::write(u16 address, u8 value) {
             memcpy(memory, cartridge.bootRom, BOOT_ROM_SIZE);
         }
         memory[address] = value;
+    } else if (address == SB_ADDRESS) { //Serial port used for debugging
+        std::cout << (char)value;
+        memory[address] = value;
+    } else if (address == SC_ADDRESS) { //Serial port control
+        memory[address] = value;
+        u8 indexOfSerialInterrupt = 3; // Request Serial Interrupt
+        write(IF_ADDRESS, setBit(read(IF_ADDRESS), indexOfSerialInterrupt));
     } else {
         memory[address] = value;
     }
