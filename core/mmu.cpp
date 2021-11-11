@@ -54,12 +54,11 @@ void MMU::write(u16 address, u8 value) {
         }
         memory[address] = value;
     } else if (address == SB_ADDRESS) { //Serial port used for debugging
-        std::cout << (char)value;
         memory[address] = value;
     } else if (address == SC_ADDRESS) { //Serial port control
-        memory[address] = value;
-        u8 indexOfSerialInterrupt = 3; // Request Serial Interrupt
-        write(IF_ADDRESS, setBit(read(IF_ADDRESS), indexOfSerialInterrupt));
+        if (value == 0x81) {
+            std::cout << (char)memory[SB_ADDRESS] << std::flush;
+        }
     } else {
         memory[address] = value;
     }

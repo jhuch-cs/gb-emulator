@@ -24,9 +24,9 @@ CPU::CPU(MMU& mmu) : mmu(mmu) {
 
 u8 CPU::step(){
     u8 cyclesFromInterrupts = handleInterrupts();
-    if (halted)
-    {
-        return 4;
+    if (halted) 
+    { 
+        return 4; 
     }
     u8 cyclesFromOpCode = exec();
     return cyclesFromInterrupts + cyclesFromOpCode;
@@ -105,8 +105,6 @@ u8 CPU::exec(){
     //In each op case, update number of cycles used so the correct number is returned at the end
     u8 cycles = 4;
     
-
-    //There are currently only switch statements for opCodes that a required for booting
     switch(opCode){
         case 0x00: {
             //NOP
@@ -647,7 +645,7 @@ u8 CPU::exec(){
             u8 result = op_add(a, n);
             setHighByte(&af, result);
 
-            return 4;
+            return 8;
         }
         case 0xC7: case 0xCF: case 0xD7: case 0xDF: case 0xE7: case 0xEF: case 0xF7: case 0xFF: {
             //RST 00H, 08H, 10H, 18H, 20H, 28H, 30H, 38H
@@ -745,8 +743,6 @@ u8 CPU::exec(){
         }
         case 0xD4: {
             //CALL NC, a16
-            //check if subtraction flag(n) & carry flags are set
-
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
             u16 nn_nn = mmu.read16Bit(pc++);
             pc++;
@@ -836,10 +832,18 @@ u8 CPU::exec(){
             return 8;
         }
         case 0xE8: {
-            //ADD SP, r8
-            //SP = SP +/- dd ; dd is 8-bit signed number
+            //ADD SP, r8 (16bit addition!)
             s8 num = mmu.read(pc++);
-            pc = op_add(sp, num);
+            u32 untruncated_result = sp + num;
+            u16 result = (u16) untruncated_result;
+
+            //TODO: Iffy on the 16bit half-carry logic here
+            setZeroFlag(false);
+            setSubtractFlag(false);
+            setCarryFlag(untruncated_result > 0xFFFF);
+            setHalfCarryFlag((sp & 0xFFF) + (num & 0xFFF) > 0xFFF);
+
+            sp = result;
             return 16;
         }
         case 0xE9: {
@@ -890,9 +894,18 @@ u8 CPU::exec(){
             return 8;
         }
         case 0xF8: {
-            //LD HL, SP + r8
+            //LD HL, SP + r8, 16bit addition!
             s8 valueToAdd = mmu.read(pc++);
-            hl = op_add(sp, valueToAdd);
+            u32 untruncated_result = sp + valueToAdd;
+            u16 result = (u16) untruncated_result;
+
+            //TODO: Iffy on the 16bit half-carry logic here
+            setZeroFlag(false);
+            setSubtractFlag(false);
+            setCarryFlag(untruncated_result > 0xFFFF);
+            setHalfCarryFlag((sp & 0xFFF) + (valueToAdd & 0xFFF) > 0xFFF);
+
+            hl = result;
             return 12;
         }
         case 0xF9: {
