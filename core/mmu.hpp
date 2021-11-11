@@ -11,6 +11,8 @@ const u16 TAC_ADDRESS = 0xFF07;
 const u16 ENABLE_BOOT_ROM = 0xFF50;
 const u16 IF_ADDRESS = 0xFF0F;
 const u16 IE_ADDRESS = 0xFFFF;
+const u16 SB_ADDRESS = 0xFF01;
+const u16 SC_ADDRESS = 0xFF02;
 
 enum Button {
   RIGHT = 0,
