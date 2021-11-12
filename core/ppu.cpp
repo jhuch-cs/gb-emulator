@@ -78,7 +78,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
     return; 
   }
 
-  cyclesLeft += cpuCyclesElapsed / 2;
+  cyclesLeft += cpuCyclesElapsed;
 
   // switch based on current mode
     // Bit 6 - LYC=LY STAT Interrupt source         (1=Enable) (Read/Write)
