@@ -236,12 +236,14 @@ u8 CPU::exec(){
             //RLCA
             u8 a = getHighByte(af);
             setHighByte(&af, op_rlc(a));
+            setZeroFlag(false);
             return 4;
         }
         case 0x17: {
             //RLA
             u8 a = getHighByte(af);
             setHighByte(&af, op_rl(a));
+            setZeroFlag(false);
             return 4;
         }
         case 0x27: {
@@ -328,7 +330,7 @@ u8 CPU::exec(){
             setHalfCarryFlag((hl & 0xFFF) + (*rr & 0xFFF) > 0xFFF);
             setSubtractFlag(false);
 
-            *rr = result;
+            hl = result;
             return 8;
         }
         case 0x0A: case 0x1A: {
@@ -389,12 +391,14 @@ u8 CPU::exec(){
             //RRCA
             u8 a = getHighByte(af);
             setHighByte(&af, op_rrc(a));
+            setZeroFlag(false);
             return 4;
         }
         case 0x1F: {
             //RRA
             u8 a = getHighByte(af);
             setHighByte(&af, op_rr(a));
+            setZeroFlag(false);
             return 4;
         }
         case 0x2F: {
@@ -444,7 +448,8 @@ u8 CPU::exec(){
         } 
         case 0xF1: {
             //POP AF
-            af = popFromStack();
+            // Bottom 4 bits of F are static 0b0000
+            af = popFromStack() & 0xFFF0;
             return 12;
         }
         case 0x76: {
@@ -853,6 +858,7 @@ u8 CPU::exec(){
         }
         case 0xE8: {
             //ADD SP, r8 (16bit addition!)
+            //TODO: Blargg #3 still fails this instruction. Is it flags?
             s8 num = mmu.read(pc++);
             u32 untruncated_result = sp + num;
             u16 result = (u16) untruncated_result;
@@ -861,7 +867,7 @@ u8 CPU::exec(){
             setZeroFlag(false);
             setSubtractFlag(false);
             setCarryFlag(untruncated_result > 0xFFFF);
-            setHalfCarryFlag((sp & 0xFFF) + (num & 0xFFF) > 0xFFF);
+            setHalfCarryFlag(((sp & 0xF) + (num & 0xF)) & 0x10);
 
             sp = result;
             return 16;
@@ -915,6 +921,7 @@ u8 CPU::exec(){
         }
         case 0xF8: {
             //LD HL, SP + r8, 16bit addition!
+            //TODO: Blargg #3 still fails this instruction. Is it flags?
             s8 valueToAdd = mmu.read(pc++);
             u32 untruncated_result = sp + valueToAdd;
             u16 result = (u16) untruncated_result;
@@ -1207,8 +1214,8 @@ u8 CPU::op_adc(u8 reg, u8 value) {
     u16 untruncated_result = reg + value + readCarryFlag();
     u8 result = (u8) untruncated_result;
 
-    setCarryFlag(untruncated_result > 0xFF);
     setHalfCarryFlag(((reg & 0xF) + (value & 0xF) + readCarryFlag()) & 0x10);
+    setCarryFlag(untruncated_result > 0xFF);
     setSubtractFlag(false);
     setZeroFlag(result == 0);
 
@@ -1227,8 +1234,8 @@ u8 CPU::op_sub(u8 reg, u8 value) {
 u8 CPU::op_sbc(u8 reg, u8 value) {
     u8 result = reg - value - readCarryFlag();
 
-    setCarryFlag(reg < value + readCarryFlag()); //went negative
     setHalfCarryFlag(((reg & 0xF) - (value & 0xF) - readCarryFlag()) & 0x10);
+    setCarryFlag(reg < value + readCarryFlag()); //went negative
     setSubtractFlag(true);
     setZeroFlag(result == 0);
 
