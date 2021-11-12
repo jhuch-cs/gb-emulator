@@ -858,18 +858,15 @@ u8 CPU::exec(){
         }
         case 0xE8: {
             //ADD SP, r8 (16bit addition!)
-            //TODO: Blargg #3 still fails this instruction. Is it flags?
+            u16 old_sp = sp;
             s8 num = mmu.read(pc++);
-            u32 untruncated_result = sp + num;
-            u16 result = (u16) untruncated_result;
+            sp = sp + num;
 
-            //TODO: Iffy on the 16bit half-carry logic here
             setZeroFlag(false);
             setSubtractFlag(false);
-            setCarryFlag(untruncated_result > 0xFFFF);
-            setHalfCarryFlag(((sp & 0xF) + (num & 0xF)) & 0x10);
+            setCarryFlag((bool)(((sp &  0xFF) < (old_sp & 0xFF) | (sp &  0xFF) < num) << 4));
+            setHalfCarryFlag((bool)((((old_sp & 0x0F) + (num & 0x0F)) > 0x0F) << 5));
 
-            sp = result;
             return 16;
         }
         case 0xE9: {
@@ -921,18 +918,13 @@ u8 CPU::exec(){
         }
         case 0xF8: {
             //LD HL, SP + r8, 16bit addition!
-            //TODO: Blargg #3 still fails this instruction. Is it flags?
-            s8 valueToAdd = mmu.read(pc++);
-            u32 untruncated_result = sp + valueToAdd;
-            u16 result = (u16) untruncated_result;
+            s8 num = mmu.read(pc++);
+            hl = sp + num;
 
-            //TODO: Iffy on the 16bit half-carry logic here
             setZeroFlag(false);
             setSubtractFlag(false);
-            setCarryFlag(untruncated_result > 0xFFFF);
-            setHalfCarryFlag((sp & 0xFFF) + (valueToAdd & 0xFFF) > 0xFFF);
-
-            hl = result;
+            setCarryFlag((bool)(((hl &  0xFF) < (sp & 0xFF) | (hl &  0xFF) < num) << 4));
+            setHalfCarryFlag((bool)((((sp & 0x0F) + (num & 0x0F)) > 0x0F) << 5));
             return 12;
         }
         case 0xF9: {
