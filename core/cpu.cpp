@@ -1,5 +1,6 @@
 #include "cpu.hpp"
 #include <iostream>
+#include <stdio.h>
 
 #define HALT_EXIT 99
 
@@ -96,6 +97,15 @@ u16 CPU::getInterruptVector(Interrupt interrupt) {
 }
 
 u8 CPU::exec(){
+    if (pc == 0x100) { 
+        logMode = true; 
+        std::freopen("output.txt","w",stdout);
+    }
+    if (logMode) {
+        printf("A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X ", getHighByte(af), getLowByte(af), getHighByte(bc), getLowByte(bc), getHighByte(de), getLowByte(de), getHighByte(hl), getLowByte(hl), sp, pc);
+        printf("(%02X %02X %02X %02X)\n", mmu.read(pc), mmu.read(pc + 1), mmu.read(pc + 2), mmu.read(pc + 3));
+    }
+
     //read code from wherever program counter is at
     //increment the program counter so next time we call it we get the next opCode
     //Anytime the program counter is used to read, it needs to be incremented, such as when reading input for an opCode
@@ -194,7 +204,7 @@ u8 CPU::exec(){
             u8* r = getRegisterFromEncoding(getHighNibble(opCode) * 2);
             *r -= 1;
 
-            setHalfCarryFlag((*r & 0x0F) == 0x00);
+            setHalfCarryFlag((*r & 0x0F) == 0x0F);
             setSubtractFlag(true);
             setZeroFlag(*r == 0);
 
@@ -205,7 +215,7 @@ u8 CPU::exec(){
             u8 value = mmu.read(hl);
             mmu.write(hl, --value);
 
-            setHalfCarryFlag((value & 0x0F) == 0x00);
+            setHalfCarryFlag((value & 0x0F) == 0x0F);
             setSubtractFlag(true);
             setZeroFlag(value == 0);
 
@@ -362,7 +372,7 @@ u8 CPU::exec(){
             u8* r = getRegisterFromEncoding(getHighNibble(opCode) * 2 + 1);
             *r -= 1;
 
-            setHalfCarryFlag((*r & 0x0F) == 0x00);
+            setHalfCarryFlag((*r & 0x0F) == 0x0F);
             setSubtractFlag(true);
             setZeroFlag(*r == 0);
 
@@ -415,18 +425,28 @@ u8 CPU::exec(){
             mmu.write(getLowByte(bc) + 0xFF00, getHighByte(af));
             return 8;
         }
-        case 0xC5: case 0xD5: case 0xE5: case 0xF5: {
+        case 0xC5: case 0xD5: case 0xE5: {
             //PUSH rr
             u16* rr = get16BitRegisterFromEncoding(getHighNibble(opCode));
             pushToStack(*rr);
             return 16;
         }
-        case 0xC1: case 0xD1: case 0xE1: case 0xF1: {
+        case 0xF5: {
+            //PUSH AF
+            pushToStack(af);
+            return 16;
+        }
+        case 0xC1: case 0xD1: case 0xE1: {
             //POP rr
             u16* rr = get16BitRegisterFromEncoding(getHighNibble(opCode));
             *rr = popFromStack();
             return 12;
         } 
+        case 0xF1: {
+            //POP AF
+            af = popFromStack();
+            return 12;
+        }
         case 0x76: {
             //HALT
             //TODO: Suspend until an interrupt occurs

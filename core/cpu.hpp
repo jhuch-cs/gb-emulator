@@ -52,6 +52,8 @@ public:
   Interrupt checkInterrupts();
   u16 getInterruptVector(Interrupt interrupt);
 
+  bool logMode = false;
+
   u8 execCB();
 
   void setCarryFlag(bool value);

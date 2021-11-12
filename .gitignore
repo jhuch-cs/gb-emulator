@@ -13,3 +13,4 @@ gb_bios.bin
 *.gb
 debug.exe
 build_debug.bat
+*.txt
