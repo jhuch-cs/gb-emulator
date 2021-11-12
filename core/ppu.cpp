@@ -112,7 +112,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
 
         // HBLANK stat interrupt
         if (checkBit(get_stat(), 3)) {
-          // signal cpu interrupt?
+          cpu.requestInterrupt(Interrupt::LCD_STAT);
         }
       }
       break;
@@ -130,7 +130,6 @@ void PPU::step(u8 cpuCyclesElapsed) {
         // check current scanline >= 144, then enter VBLANK, else enter OAM to prepare to draw another line
         if (scanline >= 144) {
           mode = VBLANK;
-          //Not sure if we request this here or at the start of VBLANK's `case` statement
           cpu.requestInterrupt(VBLANK_INT); 
           u8 stat = get_stat();
           stat = setBit(stat, 0);

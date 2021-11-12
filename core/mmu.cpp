@@ -74,10 +74,16 @@ void MMU::writeDirectly(u16 address, u8 value) {
 // For buttons, the `pressed` state is low (0)
 void MMU::pressButton(Button button) {
     u8 input = memory[INPUT_ADDRESS];
-    input = clearBit(input, static_cast<int>(button) % 2);
-    memory[INPUT_ADDRESS] = input;
+    u8 buttonVal = static_cast<int>(button);
 
-    if (input & 0xF0) { //if action or direction enabled
+    //if the button's type (action/direction) is enabled 
+    // https://gbdev.io/pandocs/Joypad_Input.html
+    if ((buttonVal % 2 + 1) & ~getHighNibble(input)) {
+        input = clearBit(input, buttonVal / 2);
+        memory[INPUT_ADDRESS] = input;
+    }
+
+    if (~input & 0x30) { //if action or direction enabled
         //request interrupt
         u8 input_interrupt_index = 4;
         memory[IF_ADDRESS] = setBit(memory[IF_ADDRESS], input_interrupt_index);
@@ -87,11 +93,17 @@ void MMU::pressButton(Button button) {
 // For buttons, the `unpressed` state is high (1)
 void MMU::unpressButton(Button button) {
     u8 input = memory[INPUT_ADDRESS];
-    input = setBit(input, static_cast<int>(button) % 2);
-    memory[INPUT_ADDRESS] = input;
+    u8 buttonVal = static_cast<int>(button);
+
+    //if the button's type (action/direction) is enabled 
+    // https://gbdev.io/pandocs/Joypad_Input.html
+    if ((buttonVal % 2 + 1) & ~getHighNibble(input)) {
+        input = setBit(input, buttonVal / 2);
+        memory[INPUT_ADDRESS] = input;
+    }
 }
 
-// Only write to the high nibble. Low nibble is input registers.
+// Only write to the high nibble. Low nibble is input registers and read-only.
 void MMU::writeInput(u8 value) {
     u8 input = memory[INPUT_ADDRESS];
     input = setHighNibble(input, value);

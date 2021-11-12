@@ -10,7 +10,7 @@ const u16 LCD_HEIGHT = 144;
 const u16 OAM_CLOCKS = 80;
 const u16 VRAM_CLOCKS = 172;
 const u16 HBLANK_CLOCKS = 204;
-const u16 VBLANK_CLOCKS = 4560;
+const u16 VBLANK_CLOCKS = 456;
 
 const u16 OAM_TABLE = 0xFE00;
 
