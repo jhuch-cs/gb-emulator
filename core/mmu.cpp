@@ -12,6 +12,8 @@ MMU::MMU(Cartridge& cartridge) : cartridge(cartridge) {
     memcpy(memory, cartridge.gameRom, cartridge.gameRomSize);
     memcpy(memory, cartridge.bootRom, BOOT_ROM_SIZE);
     memory[INPUT_ADDRESS] = 0xFF; // Input starts high, since high = unpressed
+    memory[DIV_ADDRESS] = 0x00;
+    memory[TIMA_ADDRESS] = 0x00;
 }
 
 MMU::~MMU() {
@@ -64,11 +66,22 @@ void MMU::write(u16 address, u8 value) {
     }
 }
 
+//Only use if you know what you're doing
+void MMU::writeDirectly(u16 address, u8 value) {
+    memory[address] = value;
+}
+
 // For buttons, the `pressed` state is low (0)
 void MMU::pressButton(Button button) {
     u8 input = memory[INPUT_ADDRESS];
     input = clearBit(input, static_cast<int>(button) % 2);
     memory[INPUT_ADDRESS] = input;
+
+    if (input & 0xF0) { //if action or direction enabled
+        //request interrupt
+        u8 input_interrupt_index = 4;
+        memory[IF_ADDRESS] = setBit(memory[IF_ADDRESS], input_interrupt_index);
+    }
 }
 
 // For buttons, the `unpressed` state is high (1)

@@ -24,7 +24,8 @@ private:
   MMU mmu;
   CPU cpu;
 
-  u16 cyclesLeft;
+  u16 divCyclesLeft  = 0;
+  u16 timaCyclesLeft = 0;
   
   bool timerEnabled();
   u16 getDivisor();

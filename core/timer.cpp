@@ -6,20 +6,22 @@ Timer::Timer(MMU& mmu, CPU& cpu) : mmu(mmu), cpu(cpu) {}
 
 // cpuCyclesElapsed is measured by memory cycles
 void Timer::step(u8 cpuCyclesElapsed) {
-  cyclesLeft += cpuCyclesElapsed;
+  divCyclesLeft += cpuCyclesElapsed;
 
   // DIV is always counting at 16384Hz (CPU_Clock / 256)
-  if (cyclesLeft >= 256) {
+  while (divCyclesLeft >= 256) {
     u8 divTimer = mmu.read(DIV_ADDRESS);
     divTimer++;
-    mmu.write(DIV_ADDRESS, divTimer);
-    cyclesLeft -= 256;
+    //write directly to avoid access rules around DIV_ADDRESS
+    mmu.writeDirectly(DIV_ADDRESS, divTimer);
+    divCyclesLeft -= 256;
   }
 
   // TIMA counts conditionally and variably based on 0xFF07
   if (timerEnabled()) {
+    timaCyclesLeft += cpuCyclesElapsed;
     u16 divisor = getDivisor();
-    if (cyclesLeft >= divisor) {
+    while (timaCyclesLeft >= divisor) {
       u8 timerCounter = mmu.read(TIMA_ADDRESS);
       if (timerCounter == 0xFF) { // Will overflow
         timerCounter = mmu.read(TMA_ADDRESS);
@@ -27,8 +29,8 @@ void Timer::step(u8 cpuCyclesElapsed) {
       } else {
         timerCounter++;
       }
-      mmu.write(DIV_ADDRESS, timerCounter);
-      cyclesLeft -= divisor;
+      mmu.write(TIMA_ADDRESS, timerCounter);
+      timaCyclesLeft -= divisor;
     }
   }
 }

@@ -34,6 +34,7 @@ public:
   u16 read16Bit(u16 address);
 
   void write(u16 address, u8 value);
+  void writeDirectly(u16 address, u8 value);
 
   void pressButton(Button button);
   void unpressButton(Button button);

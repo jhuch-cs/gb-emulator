@@ -38,13 +38,13 @@ u8 CPU::handleInterrupts() {
     Interrupt requested_interrupt = checkInterrupts();
 
     if (requested_interrupt != NONE) {
+        halted = false;
         acknowledgeInterrupt(requested_interrupt);
         ime = false;
         pushToStack(pc);
         pc = getInterruptVector(requested_interrupt);
         return 20;
     }
-    halted = false;
     
     return 0;
 }
