@@ -140,7 +140,8 @@ int main(int argc, char *argv[]) {
 	Cartridge cartridge = Cartridge(game_rom_size);
 	memcpy(cartridge.gameRom, game_rom, game_rom_size);
 	memcpy(cartridge.bootRom, boot_rom, BOOT_ROM_SIZE);
-	MMU mmu = MMU(cartridge);
+	Input* input = new Input();
+	MMU mmu = MMU(cartridge, input);
 	CPU cpu = CPU(mmu);
 	Timer timer = Timer(mmu, cpu);
 	PPU ppu = PPU(mmu, cpu);
@@ -155,46 +156,46 @@ int main(int argc, char *argv[]) {
 					switch (event.key.keysym.scancode) {
 						case SDL_SCANCODE_UP:
 						case SDL_SCANCODE_W: {
-							mmu.pressButton(UP);
+							input->pressButton(UP);
 						} break;
 
 						case SDL_SCANCODE_LEFT:
 						case SDL_SCANCODE_A: {
-							mmu.pressButton(LEFT);
+							input->pressButton(LEFT);
 						} break;
 
 						case SDL_SCANCODE_DOWN:
 						case SDL_SCANCODE_S: {
-							mmu.pressButton(DOWN);
+							input->pressButton(DOWN);
 						} break;
 
 						case SDL_SCANCODE_RIGHT:
 						case SDL_SCANCODE_D: {
-							mmu.pressButton(RIGHT);
+							input->pressButton(RIGHT);
 						} break;
 
 						// B
 						case SDL_SCANCODE_Z:
 						case SDL_SCANCODE_J: {
-							mmu.pressButton(B);
+							input->pressButton(B);
 						} break;
 
 						// A
 						case SDL_SCANCODE_X:
 						case SDL_SCANCODE_K: {
-							mmu.pressButton(A);
+							input->pressButton(A);
 						} break;
 
 						// Select
 						case SDL_SCANCODE_RSHIFT:
 						case SDL_SCANCODE_G: {
-							mmu.pressButton(SELECT);
+							input->pressButton(SELECT);
 						} break;
 
 						// Start
 						case SDL_SCANCODE_RETURN:
 						case SDL_SCANCODE_H: {
-							mmu.pressButton(START);
+							input->pressButton(START);
 						} break;
 
 						case SDL_SCANCODE_ESCAPE: {
@@ -211,46 +212,46 @@ int main(int argc, char *argv[]) {
 					switch (event.key.keysym.scancode) {
 						case SDL_SCANCODE_UP:
 						case SDL_SCANCODE_W: {
-							mmu.unpressButton(UP);
+							input->unpressButton(UP);
 						} break;
 
 						case SDL_SCANCODE_LEFT:
 						case SDL_SCANCODE_A: {
-							mmu.unpressButton(LEFT);
+							input->unpressButton(LEFT);
 						} break;
 
 						case SDL_SCANCODE_DOWN:
 						case SDL_SCANCODE_S: {
-							mmu.unpressButton(DOWN);
+							input->unpressButton(DOWN);
 						} break;
 
 						case SDL_SCANCODE_RIGHT:
 						case SDL_SCANCODE_D: {
-							mmu.unpressButton(RIGHT);
+							input->unpressButton(RIGHT);
 						} break;
 
 						// B
 						case SDL_SCANCODE_Z:
 						case SDL_SCANCODE_J: {
-							mmu.unpressButton(B);
+							input->unpressButton(B);
 						} break;
 
 						// A
 						case SDL_SCANCODE_X:
 						case SDL_SCANCODE_K: {
-							mmu.unpressButton(A);
+							input->unpressButton(A);
 						} break;
 
 						// Select
 						case SDL_SCANCODE_RSHIFT:
 						case SDL_SCANCODE_G: {
-							mmu.unpressButton(SELECT);
+							input->unpressButton(SELECT);
 						} break;
 
 						// Start
 						case SDL_SCANCODE_RETURN:
 						case SDL_SCANCODE_H: {
-							mmu.unpressButton(START);
+							input->unpressButton(START);
 						} break;
 						default: {
 						} break;

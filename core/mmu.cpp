@@ -7,7 +7,7 @@ bool checkAddressIsValid(u16 address) {
     return address >= 0x0000 && address <= 0xffff;
 }
 
-MMU::MMU(Cartridge& cartridge) : cartridge(cartridge) {
+MMU::MMU(Cartridge& cartridge, Input* input) : cartridge(cartridge), input(input) {
     memory = new u8[0x10000];
     memcpy(memory, cartridge.gameRom, cartridge.gameRomSize);
     memcpy(memory, cartridge.bootRom, BOOT_ROM_SIZE);
@@ -24,6 +24,9 @@ u8 MMU::read(u16 address) {
     if (!checkAddressIsValid(address)) {
         std::cout << "ERROR: Attempted read from forbidden address: " << address << std::endl;
         return 0x00;
+    }
+    if (address == INPUT_ADDRESS) {
+        return input->readInput();
     }
     return memory[address];
 }
@@ -43,7 +46,7 @@ void MMU::write(u16 address, u8 value) {
     }
 
     if (address == INPUT_ADDRESS) {
-        writeInput(value);
+        input->writeInput(value);
     } else if (address == DIV_ADDRESS) {
         memory[address] = 0;
     } else if (address == ENABLE_BOOT_ROM) {
@@ -69,43 +72,4 @@ void MMU::write(u16 address, u8 value) {
 //Only use if you know what you're doing
 void MMU::writeDirectly(u16 address, u8 value) {
     memory[address] = value;
-}
-
-// For buttons, the `pressed` state is low (0)
-void MMU::pressButton(Button button) {
-    u8 input = memory[INPUT_ADDRESS];
-    u8 buttonVal = static_cast<int>(button);
-
-    //if the button's type (action/direction) is enabled 
-    // https://gbdev.io/pandocs/Joypad_Input.html
-    if ((buttonVal % 2 + 1) & ~getHighNibble(input)) {
-        input = clearBit(input, buttonVal / 2);
-        memory[INPUT_ADDRESS] = input;
-    }
-
-    if (~input & 0x30) { //if action or direction enabled
-        //request interrupt
-        u8 input_interrupt_index = 4;
-        memory[IF_ADDRESS] = setBit(memory[IF_ADDRESS], input_interrupt_index);
-    }
-}
-
-// For buttons, the `unpressed` state is high (1)
-void MMU::unpressButton(Button button) {
-    u8 input = memory[INPUT_ADDRESS];
-    u8 buttonVal = static_cast<int>(button);
-
-    //if the button's type (action/direction) is enabled 
-    // https://gbdev.io/pandocs/Joypad_Input.html
-    if ((buttonVal % 2 + 1) & ~getHighNibble(input)) {
-        input = setBit(input, buttonVal / 2);
-        memory[INPUT_ADDRESS] = input;
-    }
-}
-
-// Only write to the high nibble. Low nibble is input registers and read-only.
-void MMU::writeInput(u8 value) {
-    u8 input = memory[INPUT_ADDRESS];
-    input = setHighNibble(input, value);
-    memory[INPUT_ADDRESS] = input;
 }
