@@ -64,6 +64,8 @@ void MMU::write(u16 address, u8 value) {
         if (value == 0x81) {
             std::cout << (char)memory[SB_ADDRESS] << std::flush;
         }
+    } else if (address == 0x2000) {
+        // do nothing for now. Eventually MBC
     } else {
         memory[address] = value;
     }
