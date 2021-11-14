@@ -93,14 +93,9 @@ void MMU::write(u16 address, u8 value) {
     } else if (address == 0x2000) {
         // do nothing for now. Eventually MBC
     } else if (address == 0xFF46) { // DMA transfer
-        u16 startAddress = value * 0x100;
-
-        for (u8 i = 0; i < 160; i++) {
-            u16 fromAddress = memory[startAddress] + i;
-            u16 toAddress = 0xFE00 + i;
-
-            u8 addressValue = read(fromAddress);
-            write(toAddress, addressValue);
+        u16 startAddress = value << 8;
+        for ( int i = 0; i < 160; i++ ) {
+            memory[0xFE00 + i] = memory[startAddress + i];
         }
         memory[address] = value;
     } else {
