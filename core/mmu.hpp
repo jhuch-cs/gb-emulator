@@ -25,6 +25,9 @@ public:
 
   void write(u16 address, u8 value);
   void writeDirectly(u16 address, u8 value);
+  u8 readDirectly(u16 address);
+
+  bool blockedByPPU(u16 address);
 private:
   Cartridge cartridge;
   Input* input; 

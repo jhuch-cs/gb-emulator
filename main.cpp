@@ -146,6 +146,12 @@ int main(int argc, char *argv[]) {
 	Timer timer = Timer(mmu, cpu);
 	PPU ppu = PPU(mmu, cpu);
 
+	// for debugging //
+	u8 lcdc = mmu.readDirectly(0xFF40);
+	lcdc = setBit(lcdc, 1);
+	mmu.writeDirectly(0xFF40, lcdc);
+	///////////////////
+
 	bool quit = false;
 	while (!quit) {
 		SDL_Event event;
