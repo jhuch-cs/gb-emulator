@@ -24,7 +24,7 @@ MMU::~MMU() {
 // During mode VRAM: CPU cannot access VRAM or OAM
 // During restricted modes, any attempt to read returns $FF, any attempt to write are ignored
 bool MMU::blockedByPPU(u16 address) {
-    u8 stat = memory[0xFF41];
+    u8 stat = memory[STAT_ADDRESS];
     stat &= 0x3;
     // OAM
     if (stat == 2) {
@@ -57,7 +57,7 @@ u16 MMU::read16Bit(u16 address) {
         return 0x00;
     }
     if (blockedByPPU(address)) {
-        return 0xFF;
+        return 0xFFFF;
     }
     return (u16(memory[address + 1]) << 8) + memory[address];
 }
@@ -92,7 +92,7 @@ void MMU::write(u16 address, u8 value) {
         }
     } else if (address == 0x2000) {
         // do nothing for now. Eventually MBC
-    } else if (address == 0xFF46) { // DMA transfer
+    } else if (address == DMA_TRSFR_ADDRESS) { // DMA transfer
         u16 startAddress = value << 8;
         for ( int i = 0; i < 160; i++ ) {
             memory[0xFE00 + i] = memory[startAddress + i];
