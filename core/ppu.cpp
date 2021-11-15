@@ -10,7 +10,7 @@ PPU::PPU(MMU& mmu, CPU& cpu) : mmu(mmu), cpu(cpu) {
 
 // LCDC (0xFF40) - LCD Control
   // (see lcdc helper functions)
-u8 PPU::get_lcdc() { return mmu.read(LCDC); }
+u8 PPU::get_lcdc() { return mmu.readDirectly(LCDC); }
 // STAT (0xFF41) - LCD Status
   // Bit 6 - LYC=LY STAT Interrupt source         (1=Enable) (Read/Write)
   // Bit 5 - Mode 2 OAM STAT Interrupt source     (1=Enable) (Read/Write)
@@ -22,37 +22,37 @@ u8 PPU::get_lcdc() { return mmu.read(LCDC); }
   //           1: VBlank
   //           2: Searching OAM
   //           3: Transferring Data to LCD Controller
-u8 PPU::get_stat() { return mmu.read(STAT); }
+u8 PPU::get_stat() { return mmu.readDirectly(STAT); }
 // ScrollY (0xFF42) - y pos of background
-u8 PPU::get_scy() { return mmu.read(SCY); }
+u8 PPU::get_scy() { return mmu.readDirectly(SCY); }
 // ScrollX (0xFF43) - x pos of background
-u8 PPU::get_scx() { return mmu.read(SCX); }
+u8 PPU::get_scx() { return mmu.readDirectly(SCX); }
 // LY (0xFF44) - LCD Y Coordinate (aka current scanline)
 // Holds values 0-153, with 144-153 indicating VBLANK
-u8 PPU::get_ly() { return mmu.read(LY); }
+u8 PPU::get_ly() { return mmu.readDirectly(LY); }
 // LYC (0xFF45) - LY Compare
-u8 PPU::get_lyc() { return mmu.read(LYC); }
+u8 PPU::get_lyc() { return mmu.readDirectly(LYC); }
 // DMA (0xFF46) - DMA Transfer and Start (160 cycles?)
-u8 PPU::get_dma() { return mmu.read(DMA); }
+u8 PPU::get_dma() { return mmu.readDirectly(DMA); }
 // bgp (0xFF47) - BG palette data
   // Bit 7-6 Color for index 3
   // Bit 5-4 Color for index 2
   // Bit 3-2 Color for index 1
   // Bit 1-0 Color for index 0
-u8 PPU::get_bgp() { return mmu.read(BGP); }
+u8 PPU::get_bgp() { return mmu.readDirectly(BGP); }
 // obp0 (0xFF48) - OBJ palette 0 dataQ
 // Just like bgp but bits 1-0 ignored because color index 0 is transparent for sprites
-u8 PPU::get_obp0() { return mmu.read(OBP0); }
+u8 PPU::get_obp0() { return mmu.readDirectly(OBP0); }
 // obp1 (0XFF49) - OBJ palette 1 data
-u8 PPU::get_obp1() { return mmu.read(OBP1); }
+u8 PPU::get_obp1() { return mmu.readDirectly(OBP1); }
 
-u8 PPU::get_wy() { return mmu.read(WY); }
-u8 PPU::get_wx() { return mmu.read(WX); }
+u8 PPU::get_wy() { return mmu.readDirectly(WY); }
+u8 PPU::get_wx() { return mmu.readDirectly(WX); }
 
 u8* PPU::getFrameBuffer() { return frameBuffer; }
 
 // Define setters as needed
-void PPU::set_ly(u8 ly) { mmu.write(LY, ly); }
+void PPU::set_ly(u8 ly) { mmu.writeDirectly(LY, ly); }
 
 // lcdc register helper functions 
 // Bit 7	LCD and PPU enable	0=Off, 1=On
@@ -75,7 +75,13 @@ bool PPU::isBgWinEnabled() { return checkBit(get_lcdc(), 0); }
 void PPU::step(u8 cpuCyclesElapsed) {
 
   if (!isLCDEnabled()) { 
-    return; 
+    mode = HBLANK;
+    u8 stat = get_stat();
+    stat = clearBit(stat, 0);
+    stat = clearBit(stat, 1);
+    mmu.writeDirectly(STAT, stat);
+    set_ly(0);
+    return;
   }
 
   cyclesLeft += cpuCyclesElapsed;
@@ -95,7 +101,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
         u8 stat = get_stat();
         stat = setBit(stat, 0);
         stat = setBit(stat, 1);
-        mmu.write(STAT, stat);
+        mmu.writeDirectly(STAT, stat);
       }
       break;
     case VRAM:
@@ -108,7 +114,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
         u8 stat = get_stat();
         stat = clearBit(stat, 0);
         stat = clearBit(stat, 1);
-        mmu.write(STAT, stat);
+        mmu.writeDirectly(STAT, stat);
 
         // HBLANK stat interrupt
         if (checkBit(get_stat(), 3)) {
@@ -122,7 +128,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
 
         // get and increment scanline
         u8 scanline = get_ly() + 1;
-        mmu.write(LY, scanline);
+        mmu.writeDirectly(LY, scanline);
 
         // check lyc interupt
         checkLYC(scanline);
@@ -134,7 +140,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
           u8 stat = get_stat();
           stat = setBit(stat, 0);
           stat = clearBit(stat, 1);
-          mmu.write(STAT, stat);
+          mmu.writeDirectly(STAT, stat);
 
           // VBLANK stat interrupt 
           if (checkBit(get_stat(), 4)) {
@@ -145,7 +151,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
           u8 stat = get_stat();
           stat = clearBit(stat, 0);
           stat = setBit(stat, 1);
-          mmu.write(STAT, stat);
+          mmu.writeDirectly(STAT, stat);
 
           // OAM stat interrupt
           if (checkBit(get_stat(), 5)) {
@@ -160,7 +166,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
 
         // increment current line
         u8 scanline = get_ly() + 1;
-        mmu.write(LY, scanline);
+        mmu.writeDirectly(LY, scanline);
 
         // check lyc interupt
         checkLYC(scanline);
@@ -169,13 +175,13 @@ void PPU::step(u8 cpuCyclesElapsed) {
         if (scanline >= 154) {
 
           // reset scanline to 0
-          mmu.write(LY, 0);
+          mmu.writeDirectly(LY, 0);
           
           mode = OAM;
           u8 stat = get_stat();
           stat = clearBit(stat, 0);
           stat = setBit(stat, 1);
-          mmu.write(STAT, stat);
+          mmu.writeDirectly(STAT, stat);
 
           // OAM stat interrupt
           if (checkBit(get_stat(), 5)) {
@@ -201,7 +207,7 @@ void PPU::checkLYC(u8 scanline) {
   } else {
     stat = clearBit(stat, 2);
   }
-  mmu.write(STAT, stat);
+  mmu.writeDirectly(STAT, stat);
 }
 
 // PPU mode typically goes from OAM -> VRAM -> HBLANK, repeating until VBLANK (aka mode 1)
@@ -276,9 +282,9 @@ void PPU::renderTiles() {
 
     s16 tileNum;
     if (unsig) {
-      tileNum = (u8)mmu.read(tileAddress);
+      tileNum = (u8)mmu.readDirectly(tileAddress);
     } else {
-      tileNum = (s8)mmu.read(tileAddress);
+      tileNum = (s8)mmu.readDirectly(tileAddress);
     }
 
     // adjust for unsigned by using 128 size offset
@@ -291,8 +297,8 @@ void PPU::renderTiles() {
 
      u8 line = yPos % 8;
      line *= 2; // two bytes of mem per line
-     u8 byte1 = mmu.read(tileLoc + line);
-     u8 byte2 = mmu.read(tileLoc + line + 1);
+     u8 byte1 = mmu.readDirectly(tileLoc + line);
+     u8 byte2 = mmu.readDirectly(tileLoc + line + 1);
 
      int colorBit = xPos % 8;
      colorBit -= 7;
@@ -322,7 +328,7 @@ void PPU::renderTiles() {
 }
 
 int PPU::getcolor(int id, u16 palette_address) {
-    u8 palette = mmu.read(palette_address);
+    u8 palette = mmu.readDirectly(palette_address);
     int hi = 2 * id + 1;
     int lo = 2 * id;
     int bit1 = (palette >> hi) & 1;
@@ -347,31 +353,84 @@ int PPU::getcolor(int id, u16 palette_address) {
     // Bit 2-0 Palette number  **CGB Mode Only**     (OBP0-7)
 void PPU::renderSprites() {
 
-  return; // TODO: implement sprite rendering
+ //return; // TODO: implement sprite rendering
 
-  // bool use8x16 = isObj8x16();
-  // int objSize = use8x16 ? 16 : 8;
+  bool use8x16 = isObj8x16();
+  int objSize = use8x16 ? 16 : 8;
 
-  // // can render up to 40 sprites, iterate through OAM table
-  // for (int i = 0; i < 40; i++) {
-  //   u8 spriteIndex = i*4;
-  //   u8 yPos = mmu.read(OAM_TABLE + spriteIndex) - 16;
-  //   u8 xPos = mmu.read(OAM_TABLE + spriteIndex + 1) - 8;
-  //   u8 tileIndex = mmu.read(OAM_TABLE + spriteIndex + 2);
-  //   u8 attr = mmu.read(OAM_TABLE + spriteIndex + 3);
+  // can render up to 40 sprites, iterate through OAM table
+  for (int i = 0; i < 40; i++) {
+    u8 spriteIndex = i*4;
+    u8 yPos = mmu.readDirectly(OAM_TABLE + spriteIndex) - 16;
+    u8 xPos = mmu.readDirectly(OAM_TABLE + spriteIndex + 1) - 8;
+    u8 tileIndex = mmu.readDirectly(OAM_TABLE + spriteIndex + 2);
+    u8 attr = mmu.readDirectly(OAM_TABLE + spriteIndex + 3);
 
-  //   // check sprite attributes
-  //   const bool bgOverObj = checkBit(attr, 7);
-  //   const bool yFlip = checkBit(attr, 6);
-  //   const bool xFlip = checkBit(attr, 5);
-  //   const u16 pallete = checkBit(attr, 4) ? OBP1 : OBP0;
+    // check sprite attributes
+    //const bool bgOverObj = checkBit(attr, 7);
+    const bool yFlip = checkBit(attr, 6);
+    const bool xFlip = checkBit(attr, 5);
+    const u16 pallete = checkBit(attr, 4) ? OBP1 : OBP0;
 
-  //   // get current scanline
-  //   u8 scanline = get_ly();
+    // get current scanline
+    u8 scanline = get_ly();
 
-  //   // draw row of pixels in sprite if sprite intercepts scanline
-  //   if (scanline >= yPos && scanline < (yPos + objSize)) {
+    // draw row of pixels in sprite if sprite intercepts scanline
+    if (scanline >= yPos && (scanline < (yPos + objSize))) {
+      int line = scanline - yPos;
 
-  //   }
-  // }
+      if (yFlip) {
+        line -= objSize;
+        line *= -1;
+      }
+
+      // look up tile data
+      // 2 bytes of mem per line
+      line *= 2;
+      u16 sprite_addr = (0x8000 + (tileIndex * 16) + line);
+      u8 byte1 = mmu.readDirectly(sprite_addr);
+      u8 byte2 = mmu.readDirectly(sprite_addr + 1);
+
+      for (int k = 7; k >= 0; k--) {
+        int position = k;
+
+        if (xFlip) {
+          position -= 7;
+          position *= -1;
+        }
+
+        u8 colorId = 0;
+        if (checkBit(byte2, position)) {
+          colorId = setBit(colorId, 1);
+        }
+        if (checkBit(byte1, position)) {
+          colorId = setBit(colorId, 0);
+        }
+
+        int color = getcolor(colorId, pallete);
+
+        if (color != 0) { // pixels with color index 0 (aka white) should be not rendered on sprites
+
+          int xPixel = 0 - k;
+          xPixel += 7;
+          int pixel = xPos + xPixel;
+  
+          u8 red = 0;
+          u8 green = 0;
+          u8 blue = 0;
+          switch(color) {
+            case 0: red = 155; green = 188 ; blue = 15; break;   // WHITE = 0  #9bbc0f RGB: 155, 188, 15
+            case 1:red = 139; green = 172 ; blue = 15; break;    // LIGHT_GRAY = 1 #8bac0f RGB: 139, 172, 15
+            case 2: red = 48; green = 98 ; blue = 48; break;     // DARK_GRAY = 2  #306230 RGB: 48, 98, 48
+            default: red = 15; green = 56; blue = 15; break;     // BLACK = 3  #0f380f RGB: 15, 56, 15
+          }
+        
+          u8* pixelStartLocation = frameBuffer + (LCD_WIDTH * 3 * scanline) + 3 * pixel;
+          pixelStartLocation[0] = red;
+          pixelStartLocation[1] = green;
+          pixelStartLocation[2] = blue;
+        }
+      }
+    }
+  }
 }
