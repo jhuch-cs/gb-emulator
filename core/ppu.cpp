@@ -409,7 +409,7 @@ void PPU::renderSprites() {
 
         int color = getcolor(colorId, pallete);
 
-        if (color != 0) { // pixels with color index 0 (aka white) should be not rendered on sprites
+        if (colorId != 0) { // pixels with color index 0 (aka white) should be not rendered on sprites
 
           int xPixel = 0 - k;
           xPixel += 7;
