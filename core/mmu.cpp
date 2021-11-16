@@ -7,10 +7,8 @@ bool checkAddressIsValid(u16 address) {
     return address >= 0x0000 && address <= 0xffff;
 }
 
-MMU::MMU(Cartridge& cartridge, Input* input) : cartridge(cartridge), input(input) {
+MMU::MMU(Cartridge* cartridge, Input* input, u8* bootRom) : cartridge(cartridge), input(input), bootRom(bootRom) {
     memory = new u8[0x10000];
-    memcpy(memory, cartridge.gameRom, cartridge.gameRomSize);
-    memcpy(memory, cartridge.bootRom, BOOT_ROM_SIZE);
     memory[INPUT_ADDRESS] = 0xFF; // Input starts high, since high = unpressed
     memory[DIV_ADDRESS] = 0x00;
     memory[TIMA_ADDRESS] = 0x00;
@@ -75,14 +73,8 @@ void MMU::write(u16 address, u8 value) {
         input->writeInput(value);
     } else if (address == DIV_ADDRESS) {
         memory[address] = 0;
-    } else if (address == ENABLE_BOOT_ROM) {
-        if (value != 0) { 
-            // Re-map the cartridge
-            memcpy(memory, cartridge.gameRom, BOOT_ROM_SIZE);
-        } else {
-            // Probably not necessary, but it took me 5 seconds to write
-            memcpy(memory, cartridge.bootRom, BOOT_ROM_SIZE);
-        }
+    } else if (address == DISABLE_BOOT_ROM) {
+        bootRomDisabled = value; //non-zero disables 
         memory[address] = value;
     } else if (address == SB_ADDRESS) { //Serial port used for debugging
         memory[address] = value;
