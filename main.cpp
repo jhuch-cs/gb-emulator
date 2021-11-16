@@ -147,6 +147,7 @@ int main(int argc, char *argv[]) {
 	PPU ppu = PPU(mmu, cpu);
 
 	bool quit = false;
+	bool unlock_fps = false;
 	while (!quit) {
 		SDL_Event event;
 
@@ -203,6 +204,10 @@ int main(int argc, char *argv[]) {
 							SDL_PushEvent(&event);
 						} break;
 
+						case SDL_SCANCODE_SPACE: {
+							unlock_fps = true;
+						} break;
+
 						default: {
 						} break;
 					}
@@ -253,6 +258,11 @@ int main(int argc, char *argv[]) {
 						case SDL_SCANCODE_H: {
 							input->unpressButton(START);
 						} break;
+
+						case SDL_SCANCODE_SPACE: {
+							unlock_fps = false;
+						} break;
+						
 						default: {
 						} break;
 					}
@@ -283,7 +293,9 @@ int main(int argc, char *argv[]) {
 		SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 		SDL_RenderPresent(renderer);
 
-		SDL_Delay(1000 / FPS);
+		if (!unlock_fps) {
+			SDL_Delay(1000 / FPS);
+		}
 	}
 	return 0;
 }

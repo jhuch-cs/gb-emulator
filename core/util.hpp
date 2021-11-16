@@ -8,8 +8,8 @@ using u32 = uint32_t;
 using s8 = int8_t;
 using s16 = uint16_t;
 
-inline u8 readBit(u16 value, u8 index) {
-  return (value & (1 << index)) != 0;
+inline bool readBit(u16 value, u8 index) {
+  return value & (1 << index);
 }
 
 inline u16 setBit(u16 value, u8 index) {
@@ -60,7 +60,7 @@ inline u8 setLowByte(u16* destination, u8 value) {
 
 // 8 bit operations
 inline bool checkBit(u8 value, u8 index) { 
-  return (value & (1 << index)) != 0;
+  return value & (1 << index);
 }
 
 inline u8 setBit(u8 value, u8 index) {
