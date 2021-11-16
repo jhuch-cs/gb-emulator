@@ -14,9 +14,7 @@ MMU::MMU(Cartridge* cartridge, Input* input, u8* bootRom) : cartridge(cartridge)
     memory[TIMA_ADDRESS] = 0x00;
 }
 
-MMU::~MMU() {
-    delete[] memory;
-}
+MMU::~MMU() {}
 
 // During mode OAM: CPU cannot access OAM
 // During mode VRAM: CPU cannot access VRAM or OAM
@@ -43,7 +41,14 @@ u8 MMU::read(u16 address) {
     if (blockedByPPU(address)) {
         return 0xFF;
     }
-    if (address == INPUT_ADDRESS) {
+    if (0x0000 <= address && address <= 0x7FFF) { //cartridge rom
+        if (address < BOOT_ROM_SIZE && !bootRomDisabled) {
+            return bootRom[address];
+        }
+        return cartridge->read(address);
+    } else if (0xA000 <= address && address <= 0xBFFF) { //cartridge ram
+        return cartridge->read(address);
+    } else if (address == INPUT_ADDRESS) {
         return input->readInput();
     }
     return memory[address];
@@ -54,10 +59,7 @@ u16 MMU::read16Bit(u16 address) {
         std::cout << "ERROR: Attempted read from forbidden address: " << address << std::endl;
         return 0x00;
     }
-    if (blockedByPPU(address)) {
-        return 0xFFFF;
-    }
-    return (u16(memory[address + 1]) << 8) + memory[address];
+    return (u16(read(address + 1)) << 8) + read(address);
 }
 
 void MMU::write(u16 address, u8 value) {
@@ -69,7 +71,11 @@ void MMU::write(u16 address, u8 value) {
         return;
     }
 
-    if (address == INPUT_ADDRESS) {
+    if (0x0000 <= address && address <= 0x7FFF) { //cartridge rom
+        cartridge->write(address, value);
+    } else if (0xA000 <= address && address <= 0xBFFF) { //cartridge ram
+        cartridge->write(address, value);
+    } else if (address == INPUT_ADDRESS) {
         input->writeInput(value);
     } else if (address == DIV_ADDRESS) {
         memory[address] = 0;
@@ -100,6 +106,7 @@ void MMU::writeDirectly(u16 address, u8 value) {
     memory[address] = value;
 }
 
+//Only use if you know what you're doing
 u8 MMU::readDirectly(u16 address) {
     return memory[address];
 }

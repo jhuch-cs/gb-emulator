@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
 
 	atexit(free_boot_rom);
 
-	u32 game_rom_size = load_binary_file(game_rom_filename, &game_rom);
+	load_binary_file(game_rom_filename, &game_rom);
 	
 	atexit(free_game_rom);
 

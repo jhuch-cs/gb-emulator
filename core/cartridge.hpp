@@ -12,11 +12,11 @@ const u16 ROM_BANK_SIZE = 32768; //32 kB
 const u16 RAM_BANK_SIZE = 8192; //8 bB
 
 enum MBCType {
-  NONE, //Tetris and Dr. Mario have no MBC at all
-  MBC1,
-  MBC2,
-  MBC3,
-  MBC5,
+  NO_MBC, //Tetris and Dr. Mario have no MBC at all
+  MBC_1,
+  MBC_2,
+  MBC_3,
+  MBC_5,
   OTHER,
 };
 
@@ -38,6 +38,7 @@ CartridgeInfo getInfo(u8* rom);
 class Cartridge {
 public:
   Cartridge(u8* rom, CartridgeInfo cartridgeInfo);
+  virtual ~Cartridge();
 
   virtual u8 read(u16 address);
   virtual void write(u16 address, u8 value);
