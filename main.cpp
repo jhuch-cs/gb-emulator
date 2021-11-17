@@ -6,19 +6,13 @@
 
 #include "core/util.hpp"
 #include "core/cartridge.hpp"
-#include "core/mmu.hpp"
-#include "core/cpu.hpp"
-#include "core/ppu.hpp"
-#include "core/timer.hpp"
+#include "core/gameboy.hpp"
 
 const char TITLE[] = "gb-emulator";
 const int WIDTH = 160;
 const int HEIGHT = 144;
 const int NUM_BYTES_OF_PIXELS = 3 * 144 * 160;
 const double FPS = 60.0;
-
-
-const int MAX_CYCLES_PER_FRAME = 69905;
 
 u8 *boot_rom;
 u8 *game_rom;
@@ -137,13 +131,8 @@ int main(int argc, char *argv[]) {
 
 	u8 pixels[NUM_BYTES_OF_PIXELS] = {};
 
-	CartridgeInfo info = getInfo(game_rom);
-	Cartridge* cartridge = createCartridge(game_rom, info);
-	Input* input = new Input();
-	MMU mmu = MMU(cartridge, input, boot_rom);
-	CPU cpu = CPU(mmu);
-	Timer timer = Timer(mmu, cpu);
-	PPU ppu = PPU(mmu, cpu);
+	Cartridge* cartridge = createCartridge(game_rom);
+	GameBoy* gameBoy = new GameBoy(boot_rom, cartridge);
 
 	bool quit = false;
 	bool unlock_fps = false;
@@ -156,46 +145,46 @@ int main(int argc, char *argv[]) {
 					switch (event.key.keysym.scancode) {
 						case SDL_SCANCODE_UP:
 						case SDL_SCANCODE_W: {
-							input->pressButton(UP);
+							gameBoy->pressButton(UP);
 						} break;
 
 						case SDL_SCANCODE_LEFT:
 						case SDL_SCANCODE_A: {
-							input->pressButton(LEFT);
+							gameBoy->pressButton(LEFT);
 						} break;
 
 						case SDL_SCANCODE_DOWN:
 						case SDL_SCANCODE_S: {
-							input->pressButton(DOWN);
+							gameBoy->pressButton(DOWN);
 						} break;
 
 						case SDL_SCANCODE_RIGHT:
 						case SDL_SCANCODE_D: {
-							input->pressButton(RIGHT);
+							gameBoy->pressButton(RIGHT);
 						} break;
 
 						// B
 						case SDL_SCANCODE_Z:
 						case SDL_SCANCODE_J: {
-							input->pressButton(B);
+							gameBoy->pressButton(B);
 						} break;
 
 						// A
 						case SDL_SCANCODE_X:
 						case SDL_SCANCODE_K: {
-							input->pressButton(A);
+							gameBoy->pressButton(A);
 						} break;
 
 						// Select
 						case SDL_SCANCODE_RSHIFT:
 						case SDL_SCANCODE_G: {
-							input->pressButton(SELECT);
+							gameBoy->pressButton(SELECT);
 						} break;
 
 						// Start
 						case SDL_SCANCODE_RETURN:
 						case SDL_SCANCODE_H: {
-							input->pressButton(START);
+							gameBoy->pressButton(START);
 						} break;
 
 						case SDL_SCANCODE_ESCAPE: {
@@ -216,46 +205,46 @@ int main(int argc, char *argv[]) {
 					switch (event.key.keysym.scancode) {
 						case SDL_SCANCODE_UP:
 						case SDL_SCANCODE_W: {
-							input->unpressButton(UP);
+							gameBoy->unpressButton(UP);
 						} break;
 
 						case SDL_SCANCODE_LEFT:
 						case SDL_SCANCODE_A: {
-							input->unpressButton(LEFT);
+							gameBoy->unpressButton(LEFT);
 						} break;
 
 						case SDL_SCANCODE_DOWN:
 						case SDL_SCANCODE_S: {
-							input->unpressButton(DOWN);
+							gameBoy->unpressButton(DOWN);
 						} break;
 
 						case SDL_SCANCODE_RIGHT:
 						case SDL_SCANCODE_D: {
-							input->unpressButton(RIGHT);
+							gameBoy->unpressButton(RIGHT);
 						} break;
 
 						// B
 						case SDL_SCANCODE_Z:
 						case SDL_SCANCODE_J: {
-							input->unpressButton(B);
+							gameBoy->unpressButton(B);
 						} break;
 
 						// A
 						case SDL_SCANCODE_X:
 						case SDL_SCANCODE_K: {
-							input->unpressButton(A);
+							gameBoy->unpressButton(A);
 						} break;
 
 						// Select
 						case SDL_SCANCODE_RSHIFT:
 						case SDL_SCANCODE_G: {
-							input->unpressButton(SELECT);
+							gameBoy->unpressButton(SELECT);
 						} break;
 
 						// Start
 						case SDL_SCANCODE_RETURN:
 						case SDL_SCANCODE_H: {
-							input->unpressButton(START);
+							gameBoy->unpressButton(START);
 						} break;
 
 						case SDL_SCANCODE_SPACE: {
@@ -276,16 +265,8 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		int cyclesThisFrame = 0;
-
-		while (cyclesThisFrame < MAX_CYCLES_PER_FRAME) {
-			int cycles = cpu.step();
-			cyclesThisFrame += cycles;
-			timer.step(cycles);
-			ppu.step(cycles);
-		}
-		
-		memcpy(pixels, ppu.getFrameBuffer(), NUM_BYTES_OF_PIXELS);
+		gameBoy->step();
+		memcpy(pixels, gameBoy->getFrameBuffer(), NUM_BYTES_OF_PIXELS);
 
 		SDL_RenderClear(renderer);
 		SDL_UpdateTexture(texture, nullptr, pixels, WIDTH * sizeof(u8) * 3);

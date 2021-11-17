@@ -174,7 +174,8 @@ void MBC3::write(u16 address, u8 value) {
 
 
 
-Cartridge* createCartridge(u8* rom, CartridgeInfo cartridgeInfo) {
+Cartridge* createCartridge(u8* rom) {
+  CartridgeInfo cartridgeInfo = getInfo(rom);
   switch (cartridgeInfo.type) {
     case NO_MBC:
       return new NoMBC(rom, cartridgeInfo);

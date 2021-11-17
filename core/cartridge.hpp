@@ -49,7 +49,7 @@ protected:
   CartridgeInfo cartridgeInfo;
 };
 
-Cartridge* createCartridge(u8* rom, CartridgeInfo cartridgeInfo);
+Cartridge* createCartridge(u8* rom);
 
 
 
