@@ -89,5 +89,6 @@ private:
   u8 ramBank = 0x00;
   bool ramEnabled = false;
   bool ramOverRTC = true;
+  u8 mappedRegister = 0x00;
   bool romBankingMode = true;
 };

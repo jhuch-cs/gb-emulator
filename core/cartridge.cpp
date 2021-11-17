@@ -128,45 +128,46 @@ u8 MBC3::read(u16 address) {
     u16 address_requested = address - 0x4000; //0x0000-0x3FFF
     return rom[start_of_rom_bank + address_requested];
   } else if (0xA000 <= address && address <= 0xBFFF) {
-    if (!ramEnabled) {
-      return 0x00;
-    } else {
+    if (0x00 <= mappedRegister && mappedRegister <= 0x07) {
       u32 start_of_ram_bank = 0x2000 * ramBank;
       u16 address_requested = address - 0xA000; //0x0000-0x1FFF
       return ram[start_of_ram_bank + address_requested];
     }
   } else {
     printf("ERROR :: Attempted cartridge read from illegal address\n");
-    return 0x00;
+    return 0xFF;
   }
+  return 0xFF;
 }
 void MBC3::write(u16 address, u8 value) {
   if (0x0000 <= address && address <= 0x1FFF) {
-    if (value == 0x00) {
-      ramEnabled = false;
-    } else if (getLowNibble(value) == 0xA) {
-      ramEnabled = true;
-    }
+    ramEnabled = value == 0x0A;
+    ramOverRTC = !(value == 0x0A);
   } else if (0x2000 <= address && address <= 0x3FFF) {
-    romBank = value == 0x00 ? 0x01 : value & 0x7F;
+    u8 bank = value & 0x7F;
+    romBank &= 0x80;
+    romBank |= bank;
+    if (romBank == 0) { romBank++; }
   } else if (0x4000 <= address && address <= 0x5FFF) {
-    if (value <= 0x03) {
-      ramOverRTC = true;
-      ramBank = value;
-    } else if (0x08 <= value && value <= 0x0C) {
-      ramOverRTC = false;
-      //TODO: Implement clock events.
-      //https://gbdev.io/pandocs/MBC3.html#4000-5fff---ram-bank-number---or---rtc-register-select-write-only
+    mappedRegister = value;
+    if (ramEnabled) {
+      ramBank = value & 0x3;
+    } else {
+      u8 bank = (value & 0x3) << 5;
+      romBank |= bank;
     }
   } else if (0x6000 <= address && address <= 0x7FFF) {
     //TODO: Implement Clock latch
     // https://gbdev.io/pandocs/MBC3.html#6000-7fff---latch-clock-data-write-only
   } else if (0xA000 <= address && address <= 0xBFFF) {
-    if (!ramEnabled || !ramOverRTC) { return; }
+    if (0x00 <= mappedRegister && mappedRegister <= 0x07) {
+      if (!ramEnabled) { return; }
 
-    u32 start_of_ram_bank = 0x2000 * ramBank;
-    u16 address_requested = address - 0xA000; //0x0000-0x1FFF
-    ram[start_of_ram_bank + address_requested] = value;
+      u32 start_of_ram_bank = 0x2000 * ramBank;
+      u16 address_requested = address - 0xA000; //0x0000-0x1FFF
+      ram[start_of_ram_bank + address_requested] = value;
+    }
+    //TODO: Some RTC stuff
   }
 }
 
