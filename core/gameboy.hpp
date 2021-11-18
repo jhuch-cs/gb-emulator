@@ -15,10 +15,12 @@ public:
   void step();
 
   u8* getFrameBuffer();
+  const char* getTitle(); 
 
   void pressButton(Button button);
   void unpressButton(Button button);
 private:
+  Cartridge* cartridge;
   Input* input;
 	MMU* mmu;
 	CPU* cpu;

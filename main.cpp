@@ -3,6 +3,7 @@
 #include <cstring>
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_gamecontroller.h>
 
 #include "core/util.hpp"
 #include "core/cartridge.hpp"
@@ -96,7 +97,7 @@ int main(int argc, char *argv[]) {
 	int window_y = SDL_WINDOWPOS_CENTERED;
 	int window_width = 4 * WIDTH;
 	int window_height = 4 * HEIGHT;
-	Uint32 window_flags = 0;
+	Uint32 window_flags = SDL_WINDOW_RESIZABLE;
 
 	window = SDL_CreateWindow(TITLE, window_x, window_y, window_width, window_height, window_flags);
 
@@ -133,6 +134,17 @@ int main(int argc, char *argv[]) {
 
 	Cartridge* cartridge = createCartridge(game_rom);
 	GameBoy* gameBoy = new GameBoy(boot_rom, cartridge);
+
+	SDL_SetWindowTitle(window, gameBoy->getTitle());
+
+	SDL_GameController *gameController;
+	SDL_GameControllerAddMappingsFromFile("gamecontroller.db");
+	for (int i = 0; i < SDL_NumJoysticks(); ++i) {
+		if (SDL_IsGameController(i) && i == 0) {
+			printf("Controller Detected: %s\n", SDL_GameControllerNameForIndex(i));
+			gameController = SDL_GameControllerOpen(0);
+		}
+	}
 
 	bool quit = false;
 	bool unlock_fps = false;
@@ -259,6 +271,106 @@ int main(int argc, char *argv[]) {
 				case SDL_QUIT: {
 					quit = true;
 				} break;
+
+				case SDL_CONTROLLERBUTTONDOWN:
+					switch (event.cbutton.button) {
+						case SDL_CONTROLLER_BUTTON_DPAD_UP: {
+							gameBoy->pressButton(UP);
+						} break;
+
+						case SDL_CONTROLLER_BUTTON_DPAD_LEFT: {
+							gameBoy->pressButton(LEFT);
+						} break;
+
+						case SDL_CONTROLLER_BUTTON_DPAD_DOWN: {
+							gameBoy->pressButton(DOWN);
+						} break;
+
+						case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: {
+							gameBoy->pressButton(RIGHT);
+						} break;
+
+						// B
+						case SDL_CONTROLLER_BUTTON_B: {
+							gameBoy->pressButton(B);
+						} break;
+
+						// A
+						case SDL_CONTROLLER_BUTTON_A: {
+							gameBoy->pressButton(A);
+						} break;
+
+						// Select
+						case SDL_CONTROLLER_BUTTON_GUIDE:
+						case SDL_CONTROLLER_BUTTON_BACK: {
+							gameBoy->pressButton(SELECT);
+						} break;
+
+						// Start
+						case SDL_CONTROLLER_BUTTON_START: {
+							gameBoy->pressButton(START);
+						} break;
+
+						case SDL_CONTROLLER_BUTTON_X: {
+							unlock_fps = true;
+						} break;
+
+						case SDL_CONTROLLER_BUTTON_Y: {
+							SDL_Event event = { .type = SDL_QUIT };
+							SDL_PushEvent(&event);
+						} break;
+
+						default: {
+							printf("Pressed: %i\n", event.cbutton.button);
+						} break;
+					} break;
+
+				case SDL_CONTROLLERBUTTONUP:
+					switch (event.cbutton.button) {
+						case SDL_CONTROLLER_BUTTON_DPAD_UP: {
+							gameBoy->unpressButton(UP);
+						} break;
+
+						case SDL_CONTROLLER_BUTTON_DPAD_LEFT: {
+							gameBoy->unpressButton(LEFT);
+						} break;
+
+						case SDL_CONTROLLER_BUTTON_DPAD_DOWN: {
+							gameBoy->unpressButton(DOWN);
+						} break;
+
+						case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: {
+							gameBoy->unpressButton(RIGHT);
+						} break;
+
+						// B
+						case SDL_CONTROLLER_BUTTON_B: {
+							gameBoy->unpressButton(B);
+						} break;
+
+						// A
+						case SDL_CONTROLLER_BUTTON_A: {
+							gameBoy->unpressButton(A);
+						} break;
+
+						// Select
+						case SDL_CONTROLLER_BUTTON_GUIDE:
+						case SDL_CONTROLLER_BUTTON_BACK: {
+							gameBoy->unpressButton(SELECT);
+						} break;
+
+						// Start
+						case SDL_CONTROLLER_BUTTON_START: {
+							gameBoy->unpressButton(START);
+						} break;
+
+						case SDL_CONTROLLER_BUTTON_X: {
+							unlock_fps = false;
+						} break;
+
+						default: {
+						} break;
+					} break;
 
 				default: {
 				};

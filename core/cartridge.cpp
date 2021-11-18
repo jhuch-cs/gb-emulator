@@ -55,6 +55,9 @@ u8 Cartridge::read(u16 address) {
 void Cartridge::write(u16 address, u8 value) {
   //Do nothing
 }
+const char* Cartridge::getTitle() {
+  return cartridgeInfo.title.c_str();
+}
 
 
 

@@ -4,6 +4,7 @@ const int CYCLES_PER_STEP = 69905;
 
 
 GameBoy::GameBoy(u8* boot_rom, Cartridge* cartridge) : 
+  cartridge(cartridge),
   input(new Input()), 
   mmu(new MMU(cartridge, input, boot_rom)),
   cpu(new CPU(mmu)),
@@ -24,6 +25,10 @@ void GameBoy::step() {
 
 u8* GameBoy::getFrameBuffer() {
   return ppu->getFrameBuffer();
+}
+
+const char* GameBoy::getTitle() {
+  return cartridge->getTitle();
 }
 
 void GameBoy::pressButton(Button button) {
