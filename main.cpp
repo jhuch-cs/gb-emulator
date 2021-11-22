@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
 
 	atexit(free_boot_rom);
 
-	u32 game_rom_size = load_binary_file(game_rom_filename, &game_rom);
+	load_binary_file(game_rom_filename, &game_rom);
 	
 	atexit(free_game_rom);
 
@@ -137,11 +137,10 @@ int main(int argc, char *argv[]) {
 
 	u8 pixels[NUM_BYTES_OF_PIXELS] = {};
 
-	Cartridge cartridge = Cartridge(game_rom_size);
-	memcpy(cartridge.gameRom, game_rom, game_rom_size);
-	memcpy(cartridge.bootRom, boot_rom, BOOT_ROM_SIZE);
+	CartridgeInfo info = getInfo(game_rom);
+	Cartridge* cartridge = createCartridge(game_rom, info);
 	Input* input = new Input();
-	MMU mmu = MMU(cartridge, input);
+	MMU mmu = MMU(cartridge, input, boot_rom);
 	CPU cpu = CPU(mmu);
 	Timer timer = Timer(mmu, cpu);
 	PPU ppu = PPU(mmu, cpu);
