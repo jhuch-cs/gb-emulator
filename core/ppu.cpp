@@ -1,8 +1,5 @@
 #include "./ppu.hpp"
 
-// Static for memory-stuff
-u8* PPU::frameBuffer = new u8[LCD_HEIGHT * LCD_WIDTH * 3];
-
 PPU::PPU(MMU* mmu, CPU* cpu) : mmu(mmu), cpu(cpu) {
   mode = OAM;
   cyclesLeft = 0;
@@ -234,26 +231,26 @@ void PPU::drawScanLine() {
   // Backgrond tile map area determined by Bit 3 in LCDC -> 0=9800-9BFF, 1=9C00-9FFF
 void PPU::renderTiles() {
 
-  u8 scrollY = get_scy();
-  u8 scrollX = get_scx();
-  u8 windowY = get_wy();
-  u8 windowX = get_wx() - 7;
+  const u8 scrollY = get_scy();
+  const u8 scrollX = get_scx();
+  const u8 windowY = get_wy();
+  const u8 windowX = get_wx() - 7;
 
   // LCDC Bit 4	BG and Window tile data area	0=8800-97FF, 1=8000-8FFF
   u16 tileData = tileDataArea();
   bool unsig = checkBit(get_lcdc(), 4);
 
+  u8 currentLine = get_ly();
+
   // Check if window's Y position is within the current scanline and window is enabled
   // Tetris doesn't use a window, so this should be just set to the bgTileMapAreaa()
   u16 tileMap;
-  bool winEnabled = (isWindowEnabled() && get_wy() <= get_ly());
+  bool winEnabled = (isWindowEnabled() && windowY <= currentLine);
   if (!winEnabled) {
     tileMap = bgTileMapArea();
   } else {
     tileMap = windowTileMapArea();
   }
-
-  u8 currentLine = get_ly();
 
   // calculate current row of tiles we are on
   u8 yPos = 0;
@@ -265,6 +262,8 @@ void PPU::renderTiles() {
 
   // calculate which row of pixels in the above tile we are on (32 tiles vertical, 8 pixels per tile)
   u16 currPixelRow = ((u8)(yPos/8)*32);
+
+  u8* pixelStartOfRow = frameBuffer + (LCD_WIDTH * 3 * currentLine);
 
   // draw current line of pixels
   for (int i = 0; i < LCD_WIDTH; i++) {
@@ -320,7 +319,7 @@ void PPU::renderTiles() {
        default: red = 15; green = 56; blue = 15; break;     // BLACK = 3  #0f380f RGB: 15, 56, 15
      }
 
-    u8* pixelStartLocation = frameBuffer + (LCD_WIDTH * 3 * currentLine) + 3 * i;
+    u8* pixelStartLocation = pixelStartOfRow + 3 * i;
     pixelStartLocation[0] = red;
     pixelStartLocation[1] = green;
     pixelStartLocation[2] = blue;
@@ -375,6 +374,8 @@ void PPU::renderSprites() {
     // get current scanline
     u8 scanline = get_ly();
 
+    u8* pixelStartOfRow = frameBuffer + (LCD_WIDTH * 3 * scanline);
+
     // draw row of pixels in sprite if sprite intercepts scanline
     if (scanline >= yPos && (scanline < (yPos + objSize))) {
       int line = scanline - yPos;
@@ -411,8 +412,7 @@ void PPU::renderSprites() {
 
         if (colorId != 0) { // pixels with color index 0 (aka white) should be not rendered on sprites
 
-          int xPixel = 0 - k;
-          xPixel += 7;
+          int xPixel = 7 - k;
           int pixel = xPos + xPixel;
   
           u8 red = 0;
@@ -425,7 +425,7 @@ void PPU::renderSprites() {
             default: red = 15; green = 56; blue = 15; break;     // BLACK = 3  #0f380f RGB: 15, 56, 15
           }
         
-          u8* pixelStartLocation = frameBuffer + (LCD_WIDTH * 3 * scanline) + 3 * pixel;
+          u8* pixelStartLocation = pixelStartOfRow + 3 * pixel;
           pixelStartLocation[0] = red;
           pixelStartLocation[1] = green;
           pixelStartLocation[2] = blue;

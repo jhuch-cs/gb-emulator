@@ -34,7 +34,7 @@ u8 CPU::step(){
 }
 
 // If an interrupt is handled, it takes an additional 20 clocks
-u8 CPU::handleInterrupts() {
+inline u8 CPU::handleInterrupts() {
     Interrupt requested_interrupt = checkInterrupts();
 
     if (requested_interrupt != NONE) {
@@ -58,7 +58,7 @@ void CPU::requestInterrupt(Interrupt interrupt) {
 }
 
 // Clears associated bit in Interrupt Flag
-void CPU::acknowledgeInterrupt(Interrupt interrupt) {
+inline void CPU::acknowledgeInterrupt(Interrupt interrupt) {
     if (interrupt != NONE) {
         u8 bitIndex = static_cast<int>(interrupt);
         mmu->write(IF_ADDRESS, clearBit(mmu->read(IF_ADDRESS), bitIndex));
@@ -66,7 +66,7 @@ void CPU::acknowledgeInterrupt(Interrupt interrupt) {
 }
 
 // Returns highest priority interrupt, or `NONE` if none requested && enabled
-Interrupt CPU::checkInterrupts() {
+inline Interrupt CPU::checkInterrupts() {
     if (!ime) { return NONE; }
 
     u8 interrupts_enabled = mmu->read(IE_ADDRESS);
@@ -90,7 +90,7 @@ Interrupt CPU::checkInterrupts() {
     }
 }
 
-u16 CPU::getInterruptVector(Interrupt interrupt) {
+inline u16 CPU::getInterruptVector(Interrupt interrupt) {
     u8 interrupt_index = static_cast<int>(interrupt);
     u16 address = 0x40 + (interrupt_index * 8); // VBLANK_INT: 0x40, LCD_STAT: 0x48, etc
     return address;
@@ -110,10 +110,6 @@ u8 CPU::exec(){
     //increment the program counter so next time we call it we get the next opCode
     //Anytime the program counter is used to read, it needs to be incremented, such as when reading input for an opCode
     u8 opCode = mmu->read(pc++);
-
-    //this is a default value for the cycles used.
-    //In each op case, update number of cycles used so the correct number is returned at the end
-    u8 cycles = 4;
     
     switch(opCode){
         case 0x00: {
@@ -954,11 +950,11 @@ u8 CPU::exec(){
     }
 
     //return the number of cycles used. 
-    return cycles;
+    return 4;
 }
 
 // Helpers
-u8 CPU::execCB() {
+inline u8 CPU::execCB() {
     u8 opCode = mmu->read(pc++);
     switch (opCode) {
         case 0x06: {
@@ -1191,7 +1187,7 @@ u8 CPU::execCB() {
     return -1; // should be unreachable
 }
 
-u8 CPU::op_add(u8 reg, u8 value) {
+inline u8 CPU::op_add(u8 reg, u8 value) {
     u16 untruncated_result = reg + value;
     u8 result = (u8) untruncated_result;
     
@@ -1202,7 +1198,7 @@ u8 CPU::op_add(u8 reg, u8 value) {
 
     return result;
 }
-u8 CPU::op_adc(u8 reg, u8 value) {
+inline u8 CPU::op_adc(u8 reg, u8 value) {
     u16 untruncated_result = reg + value + readCarryFlag();
     u8 result = (u8) untruncated_result;
 
@@ -1213,7 +1209,7 @@ u8 CPU::op_adc(u8 reg, u8 value) {
 
     return result;
 }
-u8 CPU::op_sub(u8 reg, u8 value) {
+inline u8 CPU::op_sub(u8 reg, u8 value) {
     u8 result = reg - value;
 
     setCarryFlag(reg < value); //went negative
@@ -1223,7 +1219,7 @@ u8 CPU::op_sub(u8 reg, u8 value) {
 
     return result;
 }
-u8 CPU::op_sbc(u8 reg, u8 value) {
+inline u8 CPU::op_sbc(u8 reg, u8 value) {
     u8 result = reg - value - readCarryFlag();
 
     setHalfCarryFlag(((reg & 0xF) - (value & 0xF) - readCarryFlag()) & 0x10);
@@ -1233,7 +1229,7 @@ u8 CPU::op_sbc(u8 reg, u8 value) {
 
     return result;
 }
-u8 CPU::op_and(u8 reg, u8 value) {
+inline u8 CPU::op_and(u8 reg, u8 value) {
     u8 result = reg & value;
 
     setCarryFlag(false);
@@ -1243,7 +1239,7 @@ u8 CPU::op_and(u8 reg, u8 value) {
 
     return result;
 }
-u8 CPU::op_xor(u8 reg, u8 value) {
+inline u8 CPU::op_xor(u8 reg, u8 value) {
     u8 result = reg ^ value;
 
     setCarryFlag(false);
@@ -1253,7 +1249,7 @@ u8 CPU::op_xor(u8 reg, u8 value) {
 
     return result;
 }
-u8 CPU::op_or(u8 reg, u8 value) {
+inline u8 CPU::op_or(u8 reg, u8 value) {
     u8 result = reg | value;
 
     setCarryFlag(false);
@@ -1263,14 +1259,14 @@ u8 CPU::op_or(u8 reg, u8 value) {
 
     return result;
 }
-void CPU::op_cp(u8 reg, u8 value) {
+inline void CPU::op_cp(u8 reg, u8 value) {
     setSubtractFlag(true);
     setZeroFlag(reg == value);
     setHalfCarryFlag(((reg & 0xF) - (value & 0xF)) & 0x10);
     setCarryFlag(reg < value);
 }
 
-u8 CPU::op_rlc(u8 reg) {
+inline u8 CPU::op_rlc(u8 reg) {
     u8 high_bit = readBit(reg, 7);
     u8 result = (reg << 1) | high_bit;
     
@@ -1281,7 +1277,7 @@ u8 CPU::op_rlc(u8 reg) {
     
     return result;
 }
-u8 CPU::op_rl(u8 reg) {
+inline u8 CPU::op_rl(u8 reg) {
     u8 carry_flag = readCarryFlag();
     u8 high_bit = readBit(reg, 7);
     u8 result = (reg << 1) | carry_flag;
@@ -1293,7 +1289,7 @@ u8 CPU::op_rl(u8 reg) {
 
     return result;
 }
-u8 CPU::op_rrc(u8 reg) {
+inline u8 CPU::op_rrc(u8 reg) {
     u8 low_bit = readBit(reg, 0);
     u8 result = (reg >> 1) | (low_bit << 7);
     
@@ -1304,7 +1300,7 @@ u8 CPU::op_rrc(u8 reg) {
 
     return result;
 }
-u8 CPU::op_rr(u8 reg) {
+inline u8 CPU::op_rr(u8 reg) {
     u8 carry_flag = readCarryFlag();
     u8 low_bit = readBit(reg, 0);
     u8 result = (reg >> 1) | (carry_flag << 7);
@@ -1317,44 +1313,44 @@ u8 CPU::op_rr(u8 reg) {
     return result;
 }
 
-void CPU::pushToStack(u16 value) {
+inline void CPU::pushToStack(u16 value) {
     mmu->write(--sp, getHighByte(value));
     mmu->write(--sp, getLowByte(value));
 }
 
-u16 CPU::popFromStack() {
+inline u16 CPU::popFromStack() {
     u16 value = mmu->read16Bit(sp);
     sp += 2;
     return value;
 }
 
-void CPU::setCarryFlag(bool value) {
+inline void CPU::setCarryFlag(bool value) {
     af = changeIthBitToX(af, carry_flag_index, value);
 }
-void CPU::setHalfCarryFlag(bool value) {
+inline void CPU::setHalfCarryFlag(bool value) {
     af = changeIthBitToX(af, half_carry_flag_index, value);
 }
-void CPU::setSubtractFlag(bool value) {
+inline void CPU::setSubtractFlag(bool value) {
     af = changeIthBitToX(af, subtraction_flag_index, value);
 }
-void CPU::setZeroFlag(bool value) {
+inline void CPU::setZeroFlag(bool value) {
     af = changeIthBitToX(af, zero_flag_index, value);
 }
 
-bool CPU::readCarryFlag() {
+inline bool CPU::readCarryFlag() {
     return readBit(af, carry_flag_index);
 }
-bool CPU::readHalfCarryFlag() {
+inline bool CPU::readHalfCarryFlag() {
     return readBit(af, half_carry_flag_index);
 }
-bool CPU::readSubtractFlag() {
+inline bool CPU::readSubtractFlag() {
     return readBit(af, subtraction_flag_index);
 }
-bool CPU::readZeroFlag() {
+inline bool CPU::readZeroFlag() {
     return readBit(af, zero_flag_index);
 }
 
-u8* CPU::getRegisterFromEncoding(u8 nibble) {
+inline u8* CPU::getRegisterFromEncoding(u8 nibble) {
     switch (nibble % 8) {
         case 0: // b
             return ((u8*)&bc) + 1;
@@ -1375,7 +1371,7 @@ u8* CPU::getRegisterFromEncoding(u8 nibble) {
     return 0; // should be unreachable
 }
 
-u16* CPU::get16BitRegisterFromEncoding(u8 nibble) {
+inline u16* CPU::get16BitRegisterFromEncoding(u8 nibble) {
     switch (nibble % 4) {
         case 0: // BC
             return &bc;

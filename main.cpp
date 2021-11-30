@@ -130,10 +130,9 @@ int main(int argc, char *argv[]) {
 
 	std::atexit(destroy_texture);
 
-	u8 pixels[NUM_BYTES_OF_PIXELS] = {};
-
 	Cartridge* cartridge = createCartridge(game_rom);
 	GameBoy* gameBoy = new GameBoy(boot_rom, cartridge);
+	u8* frameBuffer = gameBoy->getFrameBuffer();
 
 	SDL_SetWindowTitle(window, gameBoy->getTitle());
 
@@ -145,6 +144,9 @@ int main(int argc, char *argv[]) {
 			gameController = SDL_GameControllerOpen(0);
 		}
 	}
+
+	u32 start = SDL_GetTicks();
+	int frames = 0;
 
 	bool quit = false;
 	bool unlock_fps = false;
@@ -377,11 +379,24 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		++frames;
+		u32 elapsedMS = SDL_GetTicks() - start;
+
+		if (elapsedMS) {
+			double seconds = elapsedMS / 1000.0;
+			double fps = frames / seconds;
+			std::cout << fps << std::endl;
+		}
+
+		if (frames > 120) {
+			start = SDL_GetTicks();
+			frames = 0;
+		}
+
 		gameBoy->step();
-		memcpy(pixels, gameBoy->getFrameBuffer(), NUM_BYTES_OF_PIXELS);
 
 		SDL_RenderClear(renderer);
-		SDL_UpdateTexture(texture, nullptr, pixels, WIDTH * sizeof(u8) * 3);
+		SDL_UpdateTexture(texture, nullptr, frameBuffer, WIDTH * sizeof(u8) * 3);
 		SDL_RenderCopy(renderer, texture, nullptr, nullptr);
 		SDL_RenderPresent(renderer);
 
