@@ -1,6 +1,7 @@
 #include "./timer.hpp"
 
-Timer::Timer(MMU* mmu, CPU* cpu) : mmu(mmu), cpu(cpu) {}
+Timer::Timer(CPU* cpu, Timer_Shared_Mem* Timer_Shared) 
+  : cpu(cpu), Timer_Shared(Timer_Shared) {}
 
 // cpuCyclesElapsed is measured by memory cycles
 void Timer::step(u8 cpuCyclesElapsed) {
@@ -8,10 +9,7 @@ void Timer::step(u8 cpuCyclesElapsed) {
 
   // DIV is always counting at 16384Hz (CPU_Clock / 256)
   while (divCyclesLeft >= 256) {
-    u8 divTimer = mmu->readDirectly(DIV_ADDRESS);
-    divTimer++;
-    //write directly to avoid access rules around DIV_ADDRESS
-    mmu->writeDirectly(DIV_ADDRESS, divTimer);
+    Timer_Shared->div++;
     divCyclesLeft -= 256;
   }
 
@@ -20,26 +18,24 @@ void Timer::step(u8 cpuCyclesElapsed) {
     timaCyclesLeft += cpuCyclesElapsed;
     u16 divisor = getDivisor();
     while (timaCyclesLeft >= divisor) {
-      u8 timerCounter = mmu->readDirectly(TIMA_ADDRESS);
-      if (timerCounter == 0xFF) { // Will overflow
-        timerCounter = mmu->readDirectly(TMA_ADDRESS);
+      if (Timer_Shared->tima == 0xFF) { // Will overflow
+        Timer_Shared->tima = Timer_Shared->tma;
         cpu->requestInterrupt(TIMER);
       } else {
-        timerCounter++;
+        Timer_Shared->tima++;
       }
-      mmu->writeDirectly(TIMA_ADDRESS, timerCounter);
       timaCyclesLeft -= divisor;
     }
   }
 }
 
 bool Timer::timerEnabled() {
-  return readBit(mmu->readDirectly(TAC_ADDRESS), 2);
+  return readBit(Timer_Shared->tac, 2);
 }
 
 u16 Timer::getDivisor() {
   // interpret bottom two bits as enum
-  switch (static_cast<TIMER_DIVISOR>(mmu->readDirectly(TAC_ADDRESS) & 0b11)) {
+  switch (static_cast<TIMER_DIVISOR>(Timer_Shared->tac & 0b11)) {
     case d1024: 
       return 1024;
     case d16:

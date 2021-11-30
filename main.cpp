@@ -145,8 +145,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	u32 start = SDL_GetTicks();
-	int frames = 0;
+	// u32 start = SDL_GetTicks();
+	// int frames = 0;
 
 	bool quit = false;
 	bool unlock_fps = false;
@@ -379,19 +379,19 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-		++frames;
-		u32 elapsedMS = SDL_GetTicks() - start;
+		// ++frames;
+		// u32 elapsedMS = SDL_GetTicks() - start;
 
-		if (elapsedMS) {
-			double seconds = elapsedMS / 1000.0;
-			double fps = frames / seconds;
-			std::cout << fps << std::endl;
-		}
+		// if (elapsedMS) {
+		// 	double seconds = elapsedMS / 1000.0;
+		// 	double fps = frames / seconds;
+		// 	std::cout << fps << std::endl;
+		// }
 
-		if (frames > 120) {
-			start = SDL_GetTicks();
-			frames = 0;
-		}
+		// if (frames > 120) {
+		// 	start = SDL_GetTicks();
+		// 	frames = 0;
+		// }
 
 		gameBoy->step();
 

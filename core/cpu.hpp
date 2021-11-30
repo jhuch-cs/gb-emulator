@@ -2,6 +2,7 @@
 
 #include "./mmu.hpp"
 #include "./util.hpp"
+#include "./sharedmemorystructs.hpp"
 
 enum Interrupt {
   VBLANK_INT   = 0, //avoid conflict with Mode::VBLANK
@@ -15,7 +16,7 @@ enum Interrupt {
 class CPU {
 public: 
   // At construction time, `exec` the boot rom
-  CPU(MMU* mmu);
+  CPU(MMU* mmu, CPU_Shared_Mem* CPU_Shared);
   
   // Ultimately, `step()` should return the number of cycles required to completely execute the op code
   // that we processed this step. But timing is not mission critical at the moment, so you can just 
@@ -35,6 +36,7 @@ public:
   void acknowledgeInterrupt(Interrupt interrupt);
  private:
   MMU* mmu;
+  CPU_Shared_Mem* CPU_Shared;
   // Registers
 
   // Registers are sometimes combined into 16-bit registers. First register is the high-byte.

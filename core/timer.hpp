@@ -15,14 +15,14 @@ enum TIMER_DIVISOR {
 
 class Timer {
 public:
-  Timer(MMU* mmu, CPU* cpu);
+  Timer(CPU* cpu, Timer_Shared_Mem* Timer_Shared);
 
   void step(u8 cpuCyclesElapsed);
 
   void resetDiv();
 private:
-  MMU* mmu;
   CPU* cpu;
+  Timer_Shared_Mem* Timer_Shared;
 
   u16 divCyclesLeft  = 0;
   u16 timaCyclesLeft = 0;

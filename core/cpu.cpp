@@ -2,8 +2,6 @@
 #include <iostream>
 #include <stdio.h>
 
-#define HALT_EXIT 99
-
 //flags in AF register
 const u8 zero_flag_index = 7;
 const u8 subtraction_flag_index = 6;
@@ -11,7 +9,7 @@ const u8 half_carry_flag_index = 5;
 const u8 carry_flag_index = 4;
 
 
-CPU::CPU(MMU* mmu) : mmu(mmu) {   
+CPU::CPU(MMU* mmu, CPU_Shared_Mem* CPU_Shared) : mmu(mmu), CPU_Shared(CPU_Shared) {   
     //setting the pc to start where the boot rom is located
     this->pc = 0;
 
@@ -53,7 +51,7 @@ inline u8 CPU::handleInterrupts() {
 void CPU::requestInterrupt(Interrupt interrupt) {
     if (interrupt != NONE) {
         u8 bitIndex = static_cast<int>(interrupt);
-        mmu->write(IF_ADDRESS, setBit(mmu->read(IF_ADDRESS), bitIndex));
+        CPU_Shared->interrupt_flags = setBit(CPU_Shared->interrupt_flags, bitIndex);
     }
 }
 
@@ -61,7 +59,7 @@ void CPU::requestInterrupt(Interrupt interrupt) {
 inline void CPU::acknowledgeInterrupt(Interrupt interrupt) {
     if (interrupt != NONE) {
         u8 bitIndex = static_cast<int>(interrupt);
-        mmu->write(IF_ADDRESS, clearBit(mmu->read(IF_ADDRESS), bitIndex));
+        CPU_Shared->interrupt_flags = clearBit(CPU_Shared->interrupt_flags, bitIndex);
     }
 }
 
@@ -69,9 +67,7 @@ inline void CPU::acknowledgeInterrupt(Interrupt interrupt) {
 inline Interrupt CPU::checkInterrupts() {
     if (!ime) { return NONE; }
 
-    u8 interrupts_enabled = mmu->read(IE_ADDRESS);
-    u8 interrupts_flag = mmu->read(IF_ADDRESS);
-    u8 interrupts_requested = interrupts_enabled & interrupts_flag;
+    u8 interrupts_requested = CPU_Shared->interrupt_enable & CPU_Shared->interrupt_flags;
 
     if (interrupts_requested == 0) { return NONE; }
 

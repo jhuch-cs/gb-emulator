@@ -3,6 +3,7 @@
 #include "./mmu.hpp"
 #include "./cpu.hpp"
 #include "./util.hpp"
+#include "./sharedmemorystructs.hpp"
 
 const u16 LCD_WIDTH = 160;
 const u16 LCD_HEIGHT = 144;
@@ -12,20 +13,10 @@ const u16 VRAM_CLOCKS = 172;
 const u16 HBLANK_CLOCKS = 204;
 const u16 VBLANK_CLOCKS = 456;
 
-const u16 OAM_TABLE = 0xFE00;
-
-const u16 LCDC = 0xFF40;
-const u16 STAT = 0xFF41;
-const u16 SCY = 0xFF42;
-const u16 SCX = 0xFF43;
-const u16 LY = 0xFF44;
-const u16 LYC = 0xFF45;
-const u16 DMA = 0xFF46;
-const u16 BGP = 0xFF47;
-const u16 OBP0 = 0xFF48;
-const u16 OBP1 = 0xFF49;
-const u16 WY = 0xFF4A;
-const u16 WX = 0xFF4B;
+const u8 WHITE[] = {155, 188, 15};     // WHITE = 0  #9bbc0f RGB: 155, 188, 15
+const u8 LIGHT_GRAY[] = {139, 172, 15}; // LIGHT_GRAY = 1 #8bac0f RGB: 139, 172, 15
+const u8 DARK_GRAY[] = {48, 98, 48};   // DARK_GRAY = 2  #306230 RGB: 48, 98, 48
+const u8 BLACK[] = {15, 56, 15};       // BLACK = 3  #0f380f RGB: 15, 56, 15
 
 enum Mode {
   HBLANK,
@@ -42,7 +33,7 @@ public:
   // During restricted modes, any attempt to read returns $FF, any attempt to write are ignored
   Mode mode;
 
-  PPU(MMU* mmu, CPU* cpu);
+  PPU(PPU_Shared_Mem* PPU_Shared, CPU* cpu);
 
   // Allow the PPU to cycle `cpuCyclesElapsed / 2` times per call
   void step(u8 cpuCyclesElapsed);
@@ -50,30 +41,13 @@ public:
   // This is pulled out into a method, instead of public field access, so you only
   // have to update the buffer when SDL asks for it
   u8* getFrameBuffer();
+ 
+  void checkLYC();
 
-  // Register getters
-  u8 get_lcdc();
-  u8 get_stat();
-  u8 get_scy();
-  u8 get_scx();
-  u8 get_ly();
-  u8 get_lyc();
-  u8 get_dma();
-  u8 get_bgp();
-  u8 get_obp0();
-  u8 get_obp1();
-  u8 get_wy();
-  u8 get_wx();
-
-  // Register setters
-  void set_ly(u8 ly);
-  
-  void checkLYC(u8 scanline);
-
-  int getcolor(int id, u16 palette);
+  int getcolor(int id, u8 palette);
     
 private:
-  MMU* mmu; 
+  PPU_Shared_Mem* PPU_Shared;
   CPU* cpu;
 
   unsigned int cyclesLeft;

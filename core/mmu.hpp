@@ -3,6 +3,7 @@
 #include "./util.hpp"
 #include "./cartridge.hpp"
 #include "./input.hpp"
+#include "./sharedmemorystructs.hpp"
 
 const u16 INPUT_ADDRESS = 0xFF00;
 const u16 DIV_ADDRESS = 0xFF04;
@@ -14,12 +15,11 @@ const u16 IF_ADDRESS = 0xFF0F;
 const u16 IE_ADDRESS = 0xFFFF;
 const u16 SB_ADDRESS = 0xFF01;
 const u16 SC_ADDRESS = 0xFF02;
-const u16 STAT_ADDRESS = 0xFF41;
 const u16 DMA_TRSFR_ADDRESS = 0xFF46;
 
 class MMU {
 public: 
-  MMU(Cartridge* cartridge, Input* input, u8* bootRom);
+  MMU(Cartridge* cartridge, Input* input, u8* bootRom, PPU_Shared_Mem* PPU_Shared, CPU_Shared_Mem* CPU_Shared, Timer_Shared_Mem* Timer_Shared);
   ~MMU();
 
   u8 read(u16 address);
@@ -38,5 +38,8 @@ private:
   u8 memory[0x10000] = {}; 
 
   u8* bootRom;
+  PPU_Shared_Mem* PPU_Shared;
+  CPU_Shared_Mem* CPU_Shared;
+  Timer_Shared_Mem* Timer_Shared;
   bool bootRomDisabled = false;
 };
