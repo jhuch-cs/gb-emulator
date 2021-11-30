@@ -94,8 +94,5 @@ private:
   void renderSprites();
 
   // 160 x 144 x 3 (last dimenstion is pixel, rgb)
-  static u8* frameBuffer;
-
-  // 256 x 256
-  u8* backgroundMap;
+  u8 frameBuffer[LCD_WIDTH * LCD_HEIGHT * 3] = {};
 };

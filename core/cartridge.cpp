@@ -73,9 +73,9 @@ void NoMBC::write(u16 address, u8 value) {
 
 MBC1::MBC1(u8* rom, CartridgeInfo cartridgeInfo) : Cartridge(rom, cartridgeInfo) {}
 u8 MBC1::read(u16 address) {
-  if (0x0000 <= address && address <= 0x3FFF) {
+  if (address <= 0x3FFF) {
     return rom[address];
-  } else if (0x4000 <= address && address <= 0x7FFF) {
+  } else if (address <= 0x7FFF) {
     u32 start_of_rom_bank = 0x4000 * romBank;
     u16 address_requested = address - 0x4000; //0x0000-0x3FFF
     return rom[start_of_rom_bank + address_requested];
@@ -92,22 +92,22 @@ u8 MBC1::read(u16 address) {
   return 0x00;
 }
 void MBC1::write(u16 address, u8 value) {
-  if (0x0000 <= address && address <= 0x1FFF) {
+  if (address <= 0x1FFF) {
     if (value == 0x00) {
       ramEnabled = false;
     } else if (getLowNibble(value) == 0xA) {
       ramEnabled = true;
     }
-  } else if (0x2000 <= address && address <= 0x3FFF) {
+  } else if (address <= 0x3FFF) {
     value &= 0x1F; //discard top 3 bits
     if (value == 0x00 || value == 0x20 || value == 0x40 || value == 0x60) {
       romBank = value + 1;
     } else {
       romBank = value;
     }
-  } else if (0x4000 <= address && address <= 0x5FFF) {
+  } else if (address <= 0x5FFF) {
     //TODO: Select Ram bank or upper bits of ROM bank number?
-  } else if (0x6000 <= address && address <= 0x7FFF) {
+  } else if (address <= 0x7FFF) {
     romBankingMode = value;
   } else if (0xA000 <= address && address <= 0xBFFF) {
     if (!ramEnabled) { return; }
@@ -124,9 +124,9 @@ void MBC1::write(u16 address, u8 value) {
 
 MBC3::MBC3(u8* rom, CartridgeInfo cartridgeInfo) : Cartridge(rom, cartridgeInfo) {}
 u8 MBC3::read(u16 address) {
-  if (0x0000 <= address && address <= 0x3FFF) {
+  if (address <= 0x3FFF) {
     return rom[address];
-  } else if (0x4000 <= address && address <= 0x7FFF) {
+  } else if (address <= 0x7FFF) {
     u32 start_of_rom_bank = 0x4000 * romBank;
     u16 address_requested = address - 0x4000; //0x0000-0x3FFF
     return rom[start_of_rom_bank + address_requested];
@@ -143,15 +143,15 @@ u8 MBC3::read(u16 address) {
   return 0xFF;
 }
 void MBC3::write(u16 address, u8 value) {
-  if (0x0000 <= address && address <= 0x1FFF) {
+  if (address <= 0x1FFF) {
     ramEnabled = value == 0x0A;
     ramOverRTC = !(value == 0x0A);
-  } else if (0x2000 <= address && address <= 0x3FFF) {
+  } else if (address <= 0x3FFF) {
     u8 bank = value & 0x7F;
     romBank &= 0x80;
     romBank |= bank;
     if (romBank == 0) { romBank++; }
-  } else if (0x4000 <= address && address <= 0x5FFF) {
+  } else if (address <= 0x5FFF) {
     mappedRegister = value;
     if (ramEnabled) {
       ramBank = value & 0x3;
@@ -159,7 +159,7 @@ void MBC3::write(u16 address, u8 value) {
       u8 bank = (value & 0x3) << 5;
       romBank |= bank;
     }
-  } else if (0x6000 <= address && address <= 0x7FFF) {
+  } else if (address <= 0x7FFF) {
     //TODO: Implement Clock latch
     // https://gbdev.io/pandocs/MBC3.html#6000-7fff---latch-clock-data-write-only
   } else if (0xA000 <= address && address <= 0xBFFF) {

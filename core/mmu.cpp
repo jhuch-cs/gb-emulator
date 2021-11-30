@@ -3,12 +3,7 @@
 #include <stdio.h>
 #include "./mmu.hpp"
 
-bool checkAddressIsValid(u16 address) {
-    return address >= 0x0000 && address <= 0xffff;
-}
-
 MMU::MMU(Cartridge* cartridge, Input* input, u8* bootRom) : cartridge(cartridge), input(input), bootRom(bootRom) {
-    memory = new u8[0x10000];
     memory[INPUT_ADDRESS] = 0xFF; // Input starts high, since high = unpressed
     memory[DIV_ADDRESS] = 0x00;
     memory[TIMA_ADDRESS] = 0x00;
@@ -34,14 +29,10 @@ bool MMU::blockedByPPU(u16 address) {
 }
 
 u8 MMU::read(u16 address) {
-    if (!checkAddressIsValid(address)) {
-        std::cout << "ERROR: Attempted read from forbidden address: " << address << std::endl;
-        return 0x00;
-    }
     if (blockedByPPU(address)) {
         return 0xFF;
     }
-    if (0x0000 <= address && address <= 0x7FFF) { //cartridge rom
+    if (address <= 0x7FFF) { //cartridge rom
         if (address < BOOT_ROM_SIZE && !bootRomDisabled) {
             return bootRom[address];
         }
@@ -55,23 +46,14 @@ u8 MMU::read(u16 address) {
 }
 
 u16 MMU::read16Bit(u16 address) {
-    if (!(checkAddressIsValid(address) && checkAddressIsValid(address + 1))) {
-        std::cout << "ERROR: Attempted read from forbidden address: " << address << std::endl;
-        return 0x00;
-    }
     return (u16(read(address + 1)) << 8) + read(address);
 }
 
 void MMU::write(u16 address, u8 value) {
-    if (!checkAddressIsValid(address)) {
-        std::cout << "ERROR: Attempted write to forbidden address: " << address << std::endl;
-        return;
-    }
     if (blockedByPPU(address)) {
         return;
     }
-
-    if (0x0000 <= address && address <= 0x7FFF) { //cartridge rom
+    if (address <= 0x7FFF) { //cartridge rom
         cartridge->write(address, value);
     } else if (0xA000 <= address && address <= 0xBFFF) { //cartridge ram
         cartridge->write(address, value);
@@ -88,13 +70,9 @@ void MMU::write(u16 address, u8 value) {
         if (value == 0x81) {
             std::cout << (char)memory[SB_ADDRESS] << std::flush;
         }
-    } else if (address == 0x2000) {
-        // do nothing for now. Eventually MBC
     } else if (address == DMA_TRSFR_ADDRESS) { // DMA transfer
         u16 startAddress = value << 8;
-        for ( int i = 0; i < 160; i++ ) {
-            memory[0xFE00 + i] = memory[startAddress + i];
-        }
+        memcpy(memory + 0xFE00, memory + startAddress, 160);
         memory[address] = value;
     } else {
         memory[address] = value;
