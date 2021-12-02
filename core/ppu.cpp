@@ -244,92 +244,122 @@ void PPU::renderTiles() {
 
   u8 currentLine = get_ly();
 
-  // Check if window's Y position is within the current scanline and window is enabled
-  // Tetris doesn't use a window, so this should be just set to the bgTileMapAreaa()
-  u16 tileMap;
-  bool winEnabled = (isWindowEnabled() && windowY <= currentLine);
-  if (!winEnabled) {
-    tileMap = bgTileMapArea();
-  } else {
-    tileMap = windowTileMapArea();
-  }
-
-  // calculate current row of tiles we are on
-  u8 yPos = 0;
-  if (!winEnabled) {
-    yPos = scrollY + currentLine;
-  } else {
-    yPos = currentLine - windowY;
-  }
-
-  // calculate which row of pixels in the above tile we are on (32 tiles vertical, 8 pixels per tile)
-  u16 currPixelRow = ((u8)(yPos/8)*32);
-
   u8* pixelStartOfRow = frameBuffer + (LCD_WIDTH * 3 * currentLine);
+
+  u8 *bgwin_tiledata_0 = &mmu->vram[0][tileDataArea() - VRAM_START];
+  u8 *bgwin_tiledata_1 = &mmu->vram[1][tileDataArea() - VRAM_START];
+  u8 *obj_tiledata = &mmu->vram[0][0];
+  u8 *bgmap_0 = &mmu->vram[0][bgTileMapArea() - VRAM_START];
+  u8 *bgmap_1 = &mmu->vram[1][bgTileMapArea() - VRAM_START];
+  u8 *winmap_0 = &mmu->vram[0][windowTileMapArea() - VRAM_START];
+  u8 *winmap_1 = &mmu->vram[1][windowTileMapArea() - VRAM_START];
 
   // draw current line of pixels
   if (supportsCGB) {
-    for (int i = 0; i < LCD_WIDTH; i++) {
-      u8 xPos = i + scrollX;
+    if (isBgWinEnabled()) {
+      for (int i = 0; i < LCD_WIDTH; i++) {
+        int xBg = (i + scrollX) % 256;
+        int yBg = (currentLine + scrollY) % 256;
 
-      // same as above for x offset (if window is enabled)
-      if (winEnabled) {
-        if (i >= windowX) {
-          xPos = i - windowX;
-        }
+        int tileX = xBg / 8;
+        int tileY = yBg / 8;
+
+        int idBg = tileX + tileY * 32;
+        int tileOffsetX = xBg % 8;
+        int tileOffsetY = yBg % 8;
+
+        u8 tileIdRaw = bgmap_0[idBg];
+        s16 tileId = unsig ? (s16)(u16)tileIdRaw : (s16)(s8)tileIdRaw;
+
+        u8 tileAttr = bgmap_1[idBg];
+
+        u8 vramBank = tileAttr & 0b00001000;
+
+        int tileOffsetBg = tileOffsetX + tileOffsetY * 8;
+        int shift = 7 - tileOffsetBg % 8;
+        int tileDataOffset = tileId * 16 + tileOffsetBg/8*2;
+
+        u8 byte1 = vramBank ? bgwin_tiledata_1[tileDataOffset]     : bgwin_tiledata_0[tileDataOffset];
+        u8 byte2 = vramBank ? bgwin_tiledata_1[tileDataOffset + 1] : bgwin_tiledata_0[tileDataOffset + 1];
+
+        int colorId = ((byte1 >> shift) & 0b1) | (((byte2 >> shift) & 0b1) << 1);
+
+        u8 paletteNumber = tileAttr & 0b111;
+        u16 raw_color = ((u16*)(mmu->bg_cram))[paletteNumber * 8 + colorId * 2];
+
+        // convert from 5 bit color to 8 bit color
+        u8* pixelStartLocation = pixelStartOfRow + 3 * i;
+        pixelStartLocation[0] = ((raw_color)       & 0x1F) << 3;
+        pixelStartLocation[1] = ((raw_color >> 5)  & 0x1F) << 3;
+        pixelStartLocation[2] = ((raw_color >> 10) & 0x1F) << 3;
       }
-      
-      u16 currPixelCol = (xPos/8);
-      u16 tileAddress = tileMap + currPixelRow + currPixelCol;
-
-      s16 tileNum;
-      if (unsig) {
-        tileNum = (u8)mmu->vram[0][tileAddress - VRAM_START]; //bank 0
-      } else {
-        tileNum = (s8)mmu->vram[0][tileAddress - VRAM_START]; //bank 0
+    } else {
+      for (int i = 0; i < LCD_WIDTH; i++) {
+        u8* pixelStartLocation = pixelStartOfRow + 3 * i;
+        pixelStartLocation[0] = 0;
+        pixelStartLocation[1] = 0;
+        pixelStartLocation[2] = 0;
       }
-
-      // adjust for unsigned by using 128 size offset
-      u16 tileLoc = tileData;
-      if (unsig) {
-        tileLoc += (tileNum * 16);
-      } else {
-        tileLoc += ((tileNum + 128) * 16);
-      }
-
-      u8 tileAttr = mmu->vram[1][tileAddress - VRAM_START];
-
-      if (tileAttr & 0b00100000) { //x flip
-        xPos = 7 - xPos;
-      }
-      
-      u8 yPosFlipped = (tileAttr & 0b01000000) ? 7 - yPos : yPos; //y flip
-
-      u8 vramBank = tileAttr & 0b00001000;
-
-      u8 line = yPosFlipped % 8;
-      line *= 2; // two bytes of mem per line
-      u8 byte1 = mmu->vram[vramBank][tileLoc + line - VRAM_START];
-      u8 byte2 = mmu->vram[vramBank][tileLoc + line + 1 - VRAM_START];
-
-      int colorBit = xPos % 8;
-      colorBit -= 7;
-      colorBit *= -1;
-
-      int colorId = checkBit(byte2, colorBit);
-      colorId <<= 1;
-      colorId |= checkBit(byte1, colorBit);
-
-      u8 paletteNumber = tileAttr & 0b111;
-      u16 raw_color = ((u16*)(mmu->bg_cram))[paletteNumber * 8 + colorId * 2];
-
-      // convert from 5 bit color to 8 bit color
-      u8* pixelStartLocation = pixelStartOfRow + 3 * i;
-      pixelStartLocation[0] = ((raw_color)       & 0x1F) << 3;
-      pixelStartLocation[1] = ((raw_color >> 5)  & 0x1F) << 3;
-      pixelStartLocation[2] = ((raw_color >> 10) & 0x1F) << 3;
     }
+    if (isWindowEnabled()) {
+      for (int i = 0; i < LCD_WIDTH; i++) {
+        int xWin = (i - windowX) + 7;
+        int yWin = (currentLine - windowY);
+
+        int tileX = xWin / 8;
+        int tileY = yWin / 8;
+
+        int tileOffsetX = xWin % 8;
+        int tileOffsetY = yWin % 8;
+
+        if (xWin < 0 || yWin < 0) { // outside of window
+          continue; 
+        }
+
+        u8 tileIdRaw = winmap_0[tileX + tileY * 32];
+        s16 tileId = unsig ? (s16)(u16)tileIdRaw : (s16)(s8)tileIdRaw;
+
+        int tileOffset = tileOffsetX + tileOffsetY * 8;
+        int shift = 7 - tileOffset % 8;
+
+        u8 byte1 = bgwin_tiledata_0[tileId * 16 + tileOffset / 8 * 2];
+        u8 byte2 = bgwin_tiledata_0[tileId * 16 + tileOffset / 8 * 2 + 1];
+        
+        int colorId = ((byte1 >> shift) & 0b1) | (((byte2 >> shift) & 0b1) << 1);
+
+        u8 paletteNumber = 0;
+        u16 raw_color = ((u16*)(mmu->bg_cram))[paletteNumber * 8 + colorId * 2];
+
+        // convert from 5 bit color to 8 bit color
+        u8* pixelStartLocation = pixelStartOfRow + 3 * i;
+        pixelStartLocation[0] = ((raw_color)       & 0x1F) << 3;
+        pixelStartLocation[1] = ((raw_color >> 5)  & 0x1F) << 3;
+        pixelStartLocation[2] = ((raw_color >> 10) & 0x1F) << 3;
+      }
+    }
+
   } else {
+    // Check if window's Y position is within the current scanline and window is enabled
+    // Tetris doesn't use a window, so this should be just set to the bgTileMapAreaa()
+    u16 tileMap;
+    bool winEnabled = (isWindowEnabled() && windowY <= currentLine);
+    if (!winEnabled) {
+      tileMap = bgTileMapArea();
+    } else {
+      tileMap = windowTileMapArea();
+    }
+
+    // calculate current row of tiles we are on
+    u8 yPos = 0;
+    if (!winEnabled) {
+      yPos = scrollY + currentLine;
+    } else {
+      yPos = currentLine - windowY;
+    }
+
+    // calculate which row of pixels in the above tile we are on (32 tiles vertical, 8 pixels per tile)
+    u16 currPixelRow = ((u8)(yPos/8)*32);
+
     for (int i = 0; i < LCD_WIDTH; i++) {
       u8 xPos = i + scrollX;
 

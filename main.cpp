@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 	char *boot_rom_filename = argv[1];
 	char *game_rom_filename = argv[2];
 
-	load_binary_file(boot_rom_filename, &boot_rom);
+	int bootRomSize = load_binary_file(boot_rom_filename, &boot_rom);
 
 	atexit(free_boot_rom);
 
@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
 	std::atexit(destroy_texture);
 
 	Cartridge* cartridge = createCartridge(game_rom);
-	GameBoy* gameBoy = new GameBoy(boot_rom, cartridge);
+	GameBoy* gameBoy = new GameBoy(boot_rom, bootRomSize, cartridge);
 	u8* frameBuffer = gameBoy->getFrameBuffer();
 
 	SDL_SetWindowTitle(window, gameBoy->getTitle());

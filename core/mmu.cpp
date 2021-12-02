@@ -35,8 +35,18 @@ u8 MMU::read(u16 address, bool isPPU) {
     }
     if (address <= CARTRIDGE_END) { //cartridge rom
         if (!bootRomDisabled) {
-            if (address <= BOOT_ROM_SIZE || (supportsCGB && address <= CGB_BOOT_ROM_SIZE)) {
-                return bootRom[address];
+            if (supportsCGB) {
+                if (address <= BOOT_ROM_SIZE) {
+                    return bootRom[address];
+                } else if (address <= 0x1FF) { //For whatever reason, this is not mapped to bootRom, but to cartridge
+                    return cartridge->read(address);
+                } else if (address <= CGB_BOOT_ROM_SIZE) {
+                    return bootRom[address];
+                }
+            } else {
+                if (address <= BOOT_ROM_SIZE) {
+                    return bootRom[address];
+                }
             }
         }
         return cartridge->read(address);

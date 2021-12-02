@@ -10,7 +10,7 @@
 
 class GameBoy {
 public:
-  GameBoy(u8* boot_rom, Cartridge* cartridge);
+  GameBoy(u8* boot_rom, int bootRomSize, Cartridge* cartridge);
 
   void step();
 
