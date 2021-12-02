@@ -285,7 +285,7 @@ void PPU::renderTiles() {
         int colorId = ((byte1 >> shift) & 0b1) | (((byte2 >> shift) & 0b1) << 1);
 
         u8 paletteNumber = tileAttr & 0b111;
-        u16 raw_color = ((u16*)(mmu->bg_cram))[paletteNumber * 8 + colorId * 2];
+        u16 raw_color = (mmu->bg_cram[paletteNumber * 8 + colorId * 2 + 1] << 8) | mmu->bg_cram[paletteNumber * 8 + colorId * 2];
 
         // convert from 5 bit color to 8 bit color
         u8* pixelStartLocation = pixelStartOfRow + 3 * i;
@@ -328,7 +328,7 @@ void PPU::renderTiles() {
         int colorId = ((byte1 >> shift) & 0b1) | (((byte2 >> shift) & 0b1) << 1);
 
         u8 paletteNumber = 0;
-        u16 raw_color = ((u16*)(mmu->bg_cram))[paletteNumber * 8 + colorId * 2];
+        u16 raw_color = (mmu->bg_cram[paletteNumber * 8 + colorId * 2 + 1] << 8) | mmu->bg_cram[paletteNumber * 8 + colorId * 2];
 
         // convert from 5 bit color to 8 bit color
         u8* pixelStartLocation = pixelStartOfRow + 3 * i;
