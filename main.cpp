@@ -145,8 +145,10 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	#ifdef FRAME_RATE
 	u32 start = SDL_GetTicks();
 	int frames = 0;
+	#endif
 
 	bool quit = false;
 	bool unlock_fps = false;
@@ -379,6 +381,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		#ifdef FRAME_RATE
 		++frames;
 		u32 elapsedMS = SDL_GetTicks() - start;
 
@@ -392,6 +395,7 @@ int main(int argc, char *argv[]) {
 			start = SDL_GetTicks();
 			frames = 0;
 		}
+		#endif
 
 		gameBoy->step();
 

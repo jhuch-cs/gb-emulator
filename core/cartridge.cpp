@@ -39,6 +39,10 @@ u32 getRamSize(u8 code) {
 CartridgeInfo getInfo(u8* rom) {
   CartridgeInfo info = CartridgeInfo();
   info.title = std::string((char*)(rom + TITLE_ADDRESS));
+  u8 i = 0;
+  while ((rom + TITLE_ADDRESS)[i] != '\0' && i < 16) {
+    info.titleHash += (rom + TITLE_ADDRESS)[i++]; //TODO: Use hash to colorize GB games
+  }
   info.type = getMBCType(rom[MBC_TYPE_ADDRESS]);
   info.romSize = getRomSize(rom[ROM_SIZE_ADDRESS]);
   info.ramSize = getRamSize(rom[RAM_SIZE_ADDRESS]);
@@ -57,6 +61,9 @@ void Cartridge::write(u16 address, u8 value) {
 }
 const char* Cartridge::getTitle() {
   return cartridgeInfo.title.c_str();
+}
+bool Cartridge::supportsCGB() {
+  return rom[0x0143] == 0x80 || rom[0x0143] == 0xC0;
 }
 
 

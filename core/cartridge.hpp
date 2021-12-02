@@ -3,7 +3,6 @@
 #include <string>
 #include "./util.hpp"
 
-const u16 BOOT_ROM_SIZE = 0x100;
 const u16 TITLE_ADDRESS = 0x134;
 const u16 MBC_TYPE_ADDRESS = 0x147;
 const u16 ROM_SIZE_ADDRESS = 0x148;
@@ -27,6 +26,7 @@ u32 getRamSize(u8 code);
 class CartridgeInfo { //lazy-man's struct
 public:
   std::string title;
+  u8 titleHash = 0;
 
   MBCType type;
   u32 romSize;
@@ -44,6 +44,7 @@ public:
   virtual void write(u16 address, u8 value);
 
   const char* getTitle();
+  bool supportsCGB();
 protected:
   u8* rom;
   u8* ram;

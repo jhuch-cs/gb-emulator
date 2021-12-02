@@ -321,7 +321,6 @@ u8 CPU::exec(){
             u32 untruncated_result = hl + *rr;
             u16 result = (u16) untruncated_result;
 
-            //TODO: Iffy on the 16bit half-carry logic here
             setCarryFlag(untruncated_result > 0xFFFF);
             setHalfCarryFlag((hl & 0xFFF) + (*rr & 0xFFF) > 0xFFF);
             setSubtractFlag(false);

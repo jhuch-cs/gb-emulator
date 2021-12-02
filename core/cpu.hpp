@@ -85,8 +85,5 @@ public:
 
   u8* getRegisterFromEncoding(u8 nibble);
   u16* get16BitRegisterFromEncoding(u8 nibble);
-
-  // TODO: Like 200 op-codes and stack management functions, too
-  // Op codes: pg. 65, http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf
 };
 

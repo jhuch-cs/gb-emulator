@@ -1,15 +1,21 @@
 #include "./gameboy.hpp"
+#include <stdio.h>
 
 const int CYCLES_PER_STEP = 69905;
 
 
 GameBoy::GameBoy(u8* boot_rom, Cartridge* cartridge) : 
   cartridge(cartridge),
-  input(new Input()), 
-  mmu(new MMU(cartridge, input, boot_rom)),
-  cpu(new CPU(mmu)),
-  timer(new Timer(mmu, cpu)),
-  ppu(new PPU(mmu, cpu)) {}
+  input(new Input()) {
+    if (cartridge->supportsCGB()) {
+      printf("Attempting to run as GameBoy Color\n");
+    }
+
+    mmu = new MMU(cartridge, input, boot_rom, cartridge->supportsCGB());
+    cpu = new CPU(mmu);
+    timer = new Timer(mmu, cpu);
+    ppu = new PPU(mmu, cpu, cartridge->supportsCGB());
+  }
 
 
 void GameBoy::step() {

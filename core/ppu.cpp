@@ -1,6 +1,7 @@
 #include "./ppu.hpp"
 
-PPU::PPU(MMU* mmu, CPU* cpu) : mmu(mmu), cpu(cpu) {
+PPU::PPU(MMU* mmu, CPU* cpu, bool supportsCGB = false) 
+  : mmu(mmu), cpu(cpu), supportsCGB(supportsCGB) {
   mode = OAM;
   cyclesLeft = 0;
 }
@@ -67,6 +68,7 @@ bool PPU::isObj8x16() { return checkBit(get_lcdc(), 2); }
 // Bit 1	OBJ enable	0=Off, 1=On
 bool PPU::isObjEnabled() { return checkBit(get_lcdc(), 1); }
 // Bit 0	BG and Window enable/priority	0=Off, 1=On
+// TODO: BG and Window Master priority for CGB
 bool PPU::isBgWinEnabled() { return checkBit(get_lcdc(), 0); }
 
 void PPU::step(u8 cpuCyclesElapsed) {
@@ -266,68 +268,131 @@ void PPU::renderTiles() {
   u8* pixelStartOfRow = frameBuffer + (LCD_WIDTH * 3 * currentLine);
 
   // draw current line of pixels
-  for (int i = 0; i < LCD_WIDTH; i++) {
-    u8 xPos = i + scrollX;
+  if (supportsCGB) {
+    for (int i = 0; i < LCD_WIDTH; i++) {
+      u8 xPos = i + scrollX;
 
-    // same as above for x offset (if window is enabled)
-    if (winEnabled) {
-      if (i >= windowX) {
-        xPos = i - windowX;
+      // same as above for x offset (if window is enabled)
+      if (winEnabled) {
+        if (i >= windowX) {
+          xPos = i - windowX;
+        }
       }
+      
+      u16 currPixelCol = (xPos/8);
+      u16 tileAddress = tileMap + currPixelRow + currPixelCol;
+
+      s16 tileNum;
+      if (unsig) {
+        tileNum = (u8)mmu->vram[0][tileAddress - VRAM_START]; //bank 0
+      } else {
+        tileNum = (s8)mmu->vram[0][tileAddress - VRAM_START]; //bank 0
+      }
+
+      // adjust for unsigned by using 128 size offset
+      u16 tileLoc = tileData;
+      if (unsig) {
+        tileLoc += (tileNum * 16);
+      } else {
+        tileLoc += ((tileNum + 128) * 16);
+      }
+
+      u8 tileAttr = mmu->vram[1][tileAddress - VRAM_START];
+
+      if (tileAttr & 0b00100000) { //x flip
+        xPos = 7 - xPos;
+      }
+      
+      u8 yPosFlipped = (tileAttr & 0b01000000) ? 7 - yPos : yPos; //y flip
+
+      u8 vramBank = tileAttr & 0b00001000;
+
+      u8 line = yPosFlipped % 8;
+      line *= 2; // two bytes of mem per line
+      u8 byte1 = mmu->vram[vramBank][tileLoc + line - VRAM_START];
+      u8 byte2 = mmu->vram[vramBank][tileLoc + line + 1 - VRAM_START];
+
+      int colorBit = xPos % 8;
+      colorBit -= 7;
+      colorBit *= -1;
+
+      int colorId = checkBit(byte2, colorBit);
+      colorId <<= 1;
+      colorId |= checkBit(byte1, colorBit);
+
+      u8 paletteNumber = tileAttr & 0b111;
+      u16 raw_color = ((u16*)(mmu->bg_cram))[paletteNumber * 8 + colorId * 2];
+
+      // convert from 5 bit color to 8 bit color
+      u8* pixelStartLocation = pixelStartOfRow + 3 * i;
+      pixelStartLocation[0] = ((raw_color)       & 0x1F) << 3;
+      pixelStartLocation[1] = ((raw_color >> 5)  & 0x1F) << 3;
+      pixelStartLocation[2] = ((raw_color >> 10) & 0x1F) << 3;
     }
-    
-    u16 currPixelCol = (xPos/8);
-    u16 tileAddress = tileMap + currPixelRow + currPixelCol;
+  } else {
+    for (int i = 0; i < LCD_WIDTH; i++) {
+      u8 xPos = i + scrollX;
 
-    s16 tileNum;
-    if (unsig) {
-      tileNum = (u8)mmu->readDirectly(tileAddress);
-    } else {
-      tileNum = (s8)mmu->readDirectly(tileAddress);
+      // same as above for x offset (if window is enabled)
+      if (winEnabled) {
+        if (i >= windowX) {
+          xPos = i - windowX;
+        }
+      }
+      
+      u16 currPixelCol = (xPos/8);
+      u16 tileAddress = tileMap + currPixelRow + currPixelCol;
+
+      s16 tileNum;
+      if (unsig) {
+        tileNum = (u8)mmu->read(tileAddress, true);
+      } else {
+        tileNum = (s8)mmu->read(tileAddress, true);
+      }
+
+      // adjust for unsigned by using 128 size offset
+      u16 tileLoc = tileData;
+      if (unsig) {
+        tileLoc += (tileNum * 16);
+      } else {
+        tileLoc += ((tileNum + 128) * 16);
+      }
+
+      u8 line = yPos % 8;
+      line *= 2; // two bytes of mem per line
+      u8 byte1 = mmu->read(tileLoc + line, true);
+      u8 byte2 = mmu->read(tileLoc + line + 1, true);
+
+      int colorBit = xPos % 8;
+      colorBit -= 7;
+      colorBit *= -1;
+
+      int colorId = checkBit(byte2, colorBit);
+      colorId <<= 1;
+      colorId |= checkBit(byte1, colorBit);
+
+      int color = getcolor(colorId, BGP);
+      
+      u8 red = 0;
+      u8 green = 0;
+      u8 blue = 0;
+      switch(color) {
+        case 0: red = 155; green = 188 ; blue = 15; break;   // WHITE = 0  #9bbc0f RGB: 155, 188, 15
+        case 1:red = 139; green = 172 ; blue = 15; break;    // LIGHT_GRAY = 1 #8bac0f RGB: 139, 172, 15
+        case 2: red = 48; green = 98 ; blue = 48; break;     // DARK_GRAY = 2  #306230 RGB: 48, 98, 48
+        default: red = 15; green = 56; blue = 15; break;     // BLACK = 3  #0f380f RGB: 15, 56, 15
+      }
+
+      u8* pixelStartLocation = pixelStartOfRow + 3 * i;
+      pixelStartLocation[0] = red;
+      pixelStartLocation[1] = green;
+      pixelStartLocation[2] = blue;
     }
-
-    // adjust for unsigned by using 128 size offset
-    u16 tileLoc = tileData;
-    if (unsig) {
-      tileLoc += (tileNum * 16);
-    } else {
-      tileLoc += ((tileNum + 128) * 16);
-    }
-
-     u8 line = yPos % 8;
-     line *= 2; // two bytes of mem per line
-     u8 byte1 = mmu->readDirectly(tileLoc + line);
-     u8 byte2 = mmu->readDirectly(tileLoc + line + 1);
-
-     int colorBit = xPos % 8;
-     colorBit -= 7;
-     colorBit *= -1;
-
-     int colorId = checkBit(byte2, colorBit);
-     colorId <<= 1;
-     colorId |= checkBit(byte1, colorBit);
-
-     int color = getcolor(colorId, BGP) ;
-     
-     u8 red = 0;
-     u8 green = 0;
-     u8 blue = 0;
-     switch(color) {
-       case 0: red = 155; green = 188 ; blue = 15; break;   // WHITE = 0  #9bbc0f RGB: 155, 188, 15
-       case 1:red = 139; green = 172 ; blue = 15; break;    // LIGHT_GRAY = 1 #8bac0f RGB: 139, 172, 15
-       case 2: red = 48; green = 98 ; blue = 48; break;     // DARK_GRAY = 2  #306230 RGB: 48, 98, 48
-       default: red = 15; green = 56; blue = 15; break;     // BLACK = 3  #0f380f RGB: 15, 56, 15
-     }
-
-    u8* pixelStartLocation = pixelStartOfRow + 3 * i;
-    pixelStartLocation[0] = red;
-    pixelStartLocation[1] = green;
-    pixelStartLocation[2] = blue;
   }
 }
 
 int PPU::getcolor(int id, u16 palette_address) {
-    u8 palette = mmu->readDirectly(palette_address);
+    u8 palette = mmu->read(palette_address, true);
     int hi = 2 * id + 1;
     int lo = 2 * id;
     int bit1 = (palette >> hi) & 1;
@@ -351,19 +416,16 @@ int PPU::getcolor(int id, u16 palette_address) {
     // Bit 3   Tile VRAM-Bank  **CGB Mode Only**     (0=Bank 0, 1=Bank 1)
     // Bit 2-0 Palette number  **CGB Mode Only**     (OBP0-7)
 void PPU::renderSprites() {
-
- //return; // TODO: implement sprite rendering
-
   bool use8x16 = isObj8x16();
   int objSize = use8x16 ? 16 : 8;
 
   // can render up to 40 sprites, iterate through OAM table
   for (int i = 0; i < 40; i++) {
     u8 spriteIndex = i*4;
-    u8 yPos = mmu->readDirectly(OAM_TABLE + spriteIndex) - 16;
-    u8 xPos = mmu->readDirectly(OAM_TABLE + spriteIndex + 1) - 8;
-    u8 tileIndex = mmu->readDirectly(OAM_TABLE + spriteIndex + 2);
-    u8 attr = mmu->readDirectly(OAM_TABLE + spriteIndex + 3);
+    u8 yPos = mmu->read(OAM_TABLE + spriteIndex, true) - 16;
+    u8 xPos = mmu->read(OAM_TABLE + spriteIndex + 1, true) - 8;
+    u8 tileIndex = mmu->read(OAM_TABLE + spriteIndex + 2, true);
+    u8 attr = mmu->read(OAM_TABLE + spriteIndex + 3, true);
 
     // check sprite attributes
     //const bool bgOverObj = checkBit(attr, 7);
@@ -389,8 +451,8 @@ void PPU::renderSprites() {
       // 2 bytes of mem per line
       line *= 2;
       u16 sprite_addr = (0x8000 + (tileIndex * 16) + line);
-      u8 byte1 = mmu->readDirectly(sprite_addr);
-      u8 byte2 = mmu->readDirectly(sprite_addr + 1);
+      u8 byte1 = mmu->read(sprite_addr, true);
+      u8 byte2 = mmu->read(sprite_addr + 1, true);
 
       for (int k = 7; k >= 0; k--) {
         int position = k;

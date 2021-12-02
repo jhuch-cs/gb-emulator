@@ -42,7 +42,7 @@ public:
   // During restricted modes, any attempt to read returns $FF, any attempt to write are ignored
   Mode mode;
 
-  PPU(MMU* mmu, CPU* cpu);
+  PPU(MMU* mmu, CPU* cpu, bool supportsCGB);
 
   // Allow the PPU to cycle `cpuCyclesElapsed / 2` times per call
   void step(u8 cpuCyclesElapsed);
@@ -95,4 +95,6 @@ private:
 
   // 160 x 144 x 3 (last dimenstion is pixel, rgb)
   u8 frameBuffer[LCD_WIDTH * LCD_HEIGHT * 3] = {};
+
+  bool supportsCGB;
 };
