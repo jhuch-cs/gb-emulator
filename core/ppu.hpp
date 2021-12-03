@@ -2,6 +2,7 @@
 
 #include "./mmu.hpp"
 #include "./cpu.hpp"
+#include "./palettes.hpp"
 #include "./util.hpp"
 
 const u16 LCD_WIDTH = 160;
@@ -42,7 +43,7 @@ public:
   // During restricted modes, any attempt to read returns $FF, any attempt to write are ignored
   Mode mode;
 
-  PPU(MMU* mmu, CPU* cpu);
+  PPU(MMU* mmu, CPU* cpu, Palette palette);
 
   // Allow the PPU to cycle `cpuCyclesElapsed / 2` times per call
   void step(u8 cpuCyclesElapsed);
@@ -71,6 +72,8 @@ public:
   void checkLYC(u8 scanline);
 
   int getcolor(int id, u16 palette);
+
+  void updatePalette(Palette palette);
     
 private:
   MMU* mmu; 
@@ -92,6 +95,8 @@ private:
   void drawScanLine();
   void renderTiles();
   void renderSprites();
+
+  Palette palette;
 
   // 160 x 144 x 3 (last dimenstion is pixel, rgb)
   u8 frameBuffer[LCD_WIDTH * LCD_HEIGHT * 3] = {};

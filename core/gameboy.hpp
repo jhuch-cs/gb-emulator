@@ -19,6 +19,8 @@ public:
 
   void pressButton(Button button);
   void unpressButton(Button button);
+
+  void swapPalettes();
 private:
   Cartridge* cartridge;
   Input* input;
@@ -26,4 +28,5 @@ private:
 	CPU* cpu;
 	Timer* timer;
 	PPU* ppu;
+  PaletteSwapper* paletteSwapper;
 };
