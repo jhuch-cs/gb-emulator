@@ -8,9 +8,10 @@ GameBoy::GameBoy(u8* boot_rom, Cartridge* cartridge) :
   input(new Input()), 
   mmu(new MMU(cartridge, input, boot_rom)),
   cpu(new CPU(mmu)),
-  timer(new Timer(mmu, cpu)),
-  ppu(new PPU(mmu, cpu)) {}
-
+  timer(new Timer(mmu, cpu)) {
+    paletteSwapper = new PaletteSwapper();
+    ppu = new PPU(mmu, cpu, paletteSwapper->getNextPalette());
+  }
 
 void GameBoy::step() {
   int cyclesThisStep = 0;
@@ -36,4 +37,8 @@ void GameBoy::pressButton(Button button) {
 }
 void GameBoy::unpressButton(Button button) {
   input->unpressButton(button);
+}
+
+void GameBoy::swapPalettes() {
+  ppu->updatePalette(paletteSwapper->getNextPalette());
 }

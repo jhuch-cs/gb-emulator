@@ -1,8 +1,12 @@
 #include "./ppu.hpp"
 
-PPU::PPU(MMU* mmu, CPU* cpu) : mmu(mmu), cpu(cpu) {
+PPU::PPU(MMU* mmu, CPU* cpu, Palette palette) : mmu(mmu), cpu(cpu), palette(palette) {
   mode = OAM;
   cyclesLeft = 0;
+}
+
+void PPU::updatePalette(Palette palette) {
+  this->palette = palette;
 }
 
 // LCDC (0xFF40) - LCD Control
@@ -308,21 +312,11 @@ void PPU::renderTiles() {
      colorId |= checkBit(byte1, colorBit);
 
      int color = getcolor(colorId, BGP) ;
-     
-     u8 red = 0;
-     u8 green = 0;
-     u8 blue = 0;
-     switch(color) {
-       case 0: red = 155; green = 188 ; blue = 15; break;   // WHITE = 0  #9bbc0f RGB: 155, 188, 15
-       case 1:red = 139; green = 172 ; blue = 15; break;    // LIGHT_GRAY = 1 #8bac0f RGB: 139, 172, 15
-       case 2: red = 48; green = 98 ; blue = 48; break;     // DARK_GRAY = 2  #306230 RGB: 48, 98, 48
-       default: red = 15; green = 56; blue = 15; break;     // BLACK = 3  #0f380f RGB: 15, 56, 15
-     }
 
     u8* pixelStartLocation = pixelStartOfRow + 3 * i;
-    pixelStartLocation[0] = red;
-    pixelStartLocation[1] = green;
-    pixelStartLocation[2] = blue;
+    pixelStartLocation[0] = palette[color][0];
+    pixelStartLocation[1] = palette[color][1];
+    pixelStartLocation[2] = palette[color][2];
   }
 }
 
@@ -414,21 +408,11 @@ void PPU::renderSprites() {
 
           int xPixel = 7 - k;
           int pixel = xPos + xPixel;
-  
-          u8 red = 0;
-          u8 green = 0;
-          u8 blue = 0;
-          switch(color) {
-            case 0: red = 155; green = 188 ; blue = 15; break;   // WHITE = 0  #9bbc0f RGB: 155, 188, 15
-            case 1:red = 139; green = 172 ; blue = 15; break;    // LIGHT_GRAY = 1 #8bac0f RGB: 139, 172, 15
-            case 2: red = 48; green = 98 ; blue = 48; break;     // DARK_GRAY = 2  #306230 RGB: 48, 98, 48
-            default: red = 15; green = 56; blue = 15; break;     // BLACK = 3  #0f380f RGB: 15, 56, 15
-          }
         
           u8* pixelStartLocation = pixelStartOfRow + 3 * pixel;
-          pixelStartLocation[0] = red;
-          pixelStartLocation[1] = green;
-          pixelStartLocation[2] = blue;
+          pixelStartLocation[0] = palette[color][0];
+          pixelStartLocation[1] = palette[color][1];
+          pixelStartLocation[2] = palette[color][2];
         }
       }
     }

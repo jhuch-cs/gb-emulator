@@ -145,8 +145,10 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	#ifdef FRAMERATE
 	u32 start = SDL_GetTicks();
 	int frames = 0;
+	#endif
 
 	bool quit = false;
 	bool unlock_fps = false;
@@ -199,6 +201,11 @@ int main(int argc, char *argv[]) {
 						case SDL_SCANCODE_RETURN:
 						case SDL_SCANCODE_H: {
 							gameBoy->pressButton(START);
+						} break;
+
+						case SDL_SCANCODE_P:
+						case SDL_SCANCODE_C: {
+							gameBoy->swapPalettes();
 						} break;
 
 						case SDL_SCANCODE_ESCAPE: {
@@ -317,6 +324,10 @@ int main(int argc, char *argv[]) {
 							unlock_fps = true;
 						} break;
 
+						case SDL_CONTROLLER_BUTTON_LEFTSHOULDER: {
+							gameBoy->swapPalettes();
+						} break;
+
 						case SDL_CONTROLLER_BUTTON_Y: {
 							SDL_Event event = { .type = SDL_QUIT };
 							SDL_PushEvent(&event);
@@ -379,6 +390,7 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
+		#ifdef FRAMERATE
 		++frames;
 		u32 elapsedMS = SDL_GetTicks() - start;
 
@@ -392,6 +404,7 @@ int main(int argc, char *argv[]) {
 			start = SDL_GetTicks();
 			frames = 0;
 		}
+		#endif
 
 		gameBoy->step();
 
