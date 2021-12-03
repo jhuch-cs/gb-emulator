@@ -1,9 +1,9 @@
 #include <fstream>
 #include <iostream>
 #include <cstring>
+#include <vector>
 
 #include <SDL2/SDL.h>
-
 #include "core/util.hpp"
 #include "core/cartridge.hpp"
 #include "core/mmu.hpp"
@@ -75,6 +75,14 @@ int load_binary_file(char *filename, u8 **buffer) {
 }
 
 int main(int argc, char *argv[]) {
+	//THIS SPOT BELOW IS ONLY IF PRELOADING THE FILES
+	/*std::vector<char*> new_argv(argv, argv + argc);
+	new_argv.push_back((char*)"./bootRom.gb");
+	new_argv.push_back((char*)"./tetris.gb");
+	new_argv.push_back(nullptr);
+	argv = new_argv.data();
+	argc = 3;*/
+	std::cerr << "Starting up" << std::endl;
 	if (argc < 3) {
 		std::cerr << "Usage: " << argv[0] << " [boot_rom_file] [game_rom_file]" << std::endl;
 		exit(EXIT_FAILURE);
@@ -91,10 +99,55 @@ int main(int argc, char *argv[]) {
 	
 	atexit(free_game_rom);
 
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-		std::cout << "Error initializing SDL: " << SDL_GetError();
+	/*if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+		//std::cout << "Error initializing SDL: " << SDL_GetError();
+		std::cerr << "Error initializing SDL: " << SDL_Init(SDL_INIT_EVERYTHING) << std::endl;
+		exit(EXIT_FAILURE);
+	}*/
+
+
+	if (SDL_Init(SDL_INIT_TIMER) != 0) {
+		//std::cout << "Error initializing SDL: " << SDL_GetError();
+		std::cerr << "Error initializing SDL_INIT_TIMER: " << SDL_Init(SDL_INIT_TIMER) << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	if (SDL_Init(SDL_INIT_AUDIO) != 0) {
+		//std::cout << "Error initializing SDL: " << SDL_GetError();
+		std::cerr << "Error initializing SDL_INIT_AUDIO: " << SDL_Init(SDL_INIT_AUDIO) << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	if (SDL_Init(SDL_INIT_GAMECONTROLLER) != 0) {
+		//std::cout << "Error initializing SDL: " << SDL_GetError();
+		std::cerr << "Error initializing SDL_INIT_GAMECONTROLLER: " << SDL_Init(SDL_INIT_GAMECONTROLLER) << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+		//std::cout << "Error initializing SDL: " << SDL_GetError();
+		std::cerr << "Error initializing SDL_INIT_VIDEO: " << SDL_Init(SDL_INIT_VIDEO) << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	if (SDL_Init(SDL_INIT_JOYSTICK) != 0) {
+		//std::cout << "Error initializing SDL: " << SDL_GetError();
+		std::cerr << "Error initializing SDL_INIT_JOYSTICK: " << SDL_Init(SDL_INIT_JOYSTICK) << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	/*if (SDL_Init(SDL_INIT_HAPTIC) != 0) {
+		//std::cout << "Error initializing SDL: " << SDL_GetError();
+		std::cerr << "Error initializing SDL_INIT_HAPTIC: " << SDL_Init(SDL_INIT_HAPTIC) << std::endl;
+		exit(EXIT_FAILURE);
+	}*/
+	if (SDL_Init(SDL_INIT_EVENTS) != 0) {
+		//std::cout << "Error initializing SDL: " << SDL_GetError();
+		std::cerr << "Error initializing SDL_INIT_EVENTS: " << SDL_Init(SDL_INIT_EVENTS) << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	/*if (SDL_Init(SDL_INIT_SENSOR) != 0) {
+		//std::cout << "Error initializing SDL: " << SDL_GetError();
+		std::cerr << "Error initializing SDL_INIT_SENSOR: " << SDL_Init(SDL_INIT_SENSOR) << std::endl;
+		exit(EXIT_FAILURE);
+	}*/
+
+	std::cerr << "SDL has been initialized";
 
 	std::atexit(SDL_Quit);
 
