@@ -3,14 +3,14 @@
 // Static for memory-stuff
 u8* PPU::frameBuffer = new u8[LCD_HEIGHT * LCD_WIDTH * 3];
 
-PPU::PPU(MMU& mmu, CPU& cpu) : mmu(mmu), cpu(cpu) {
+PPU::PPU(MMU* mmu, CPU* cpu) : mmu(mmu), cpu(cpu) {
   mode = OAM;
   cyclesLeft = 0;
 }
 
 // LCDC (0xFF40) - LCD Control
   // (see lcdc helper functions)
-u8 PPU::get_lcdc() { return mmu.readDirectly(LCDC); }
+u8 PPU::get_lcdc() { return mmu->readDirectly(LCDC); }
 // STAT (0xFF41) - LCD Status
   // Bit 6 - LYC=LY STAT Interrupt source         (1=Enable) (Read/Write)
   // Bit 5 - Mode 2 OAM STAT Interrupt source     (1=Enable) (Read/Write)
@@ -22,37 +22,37 @@ u8 PPU::get_lcdc() { return mmu.readDirectly(LCDC); }
   //           1: VBlank
   //           2: Searching OAM
   //           3: Transferring Data to LCD Controller
-u8 PPU::get_stat() { return mmu.readDirectly(STAT); }
+u8 PPU::get_stat() { return mmu->readDirectly(STAT); }
 // ScrollY (0xFF42) - y pos of background
-u8 PPU::get_scy() { return mmu.readDirectly(SCY); }
+u8 PPU::get_scy() { return mmu->readDirectly(SCY); }
 // ScrollX (0xFF43) - x pos of background
-u8 PPU::get_scx() { return mmu.readDirectly(SCX); }
+u8 PPU::get_scx() { return mmu->readDirectly(SCX); }
 // LY (0xFF44) - LCD Y Coordinate (aka current scanline)
 // Holds values 0-153, with 144-153 indicating VBLANK
-u8 PPU::get_ly() { return mmu.readDirectly(LY); }
+u8 PPU::get_ly() { return mmu->readDirectly(LY); }
 // LYC (0xFF45) - LY Compare
-u8 PPU::get_lyc() { return mmu.readDirectly(LYC); }
+u8 PPU::get_lyc() { return mmu->readDirectly(LYC); }
 // DMA (0xFF46) - DMA Transfer and Start (160 cycles?)
-u8 PPU::get_dma() { return mmu.readDirectly(DMA); }
+u8 PPU::get_dma() { return mmu->readDirectly(DMA); }
 // bgp (0xFF47) - BG palette data
   // Bit 7-6 Color for index 3
   // Bit 5-4 Color for index 2
   // Bit 3-2 Color for index 1
   // Bit 1-0 Color for index 0
-u8 PPU::get_bgp() { return mmu.readDirectly(BGP); }
+u8 PPU::get_bgp() { return mmu->readDirectly(BGP); }
 // obp0 (0xFF48) - OBJ palette 0 dataQ
 // Just like bgp but bits 1-0 ignored because color index 0 is transparent for sprites
-u8 PPU::get_obp0() { return mmu.readDirectly(OBP0); }
+u8 PPU::get_obp0() { return mmu->readDirectly(OBP0); }
 // obp1 (0XFF49) - OBJ palette 1 data
-u8 PPU::get_obp1() { return mmu.readDirectly(OBP1); }
+u8 PPU::get_obp1() { return mmu->readDirectly(OBP1); }
 
-u8 PPU::get_wy() { return mmu.readDirectly(WY); }
-u8 PPU::get_wx() { return mmu.readDirectly(WX); }
+u8 PPU::get_wy() { return mmu->readDirectly(WY); }
+u8 PPU::get_wx() { return mmu->readDirectly(WX); }
 
 u8* PPU::getFrameBuffer() { return frameBuffer; }
 
 // Define setters as needed
-void PPU::set_ly(u8 ly) { mmu.writeDirectly(LY, ly); }
+void PPU::set_ly(u8 ly) { mmu->writeDirectly(LY, ly); }
 
 // lcdc register helper functions 
 // Bit 7	LCD and PPU enable	0=Off, 1=On
@@ -79,7 +79,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
     u8 stat = get_stat();
     stat = clearBit(stat, 0);
     stat = clearBit(stat, 1);
-    mmu.writeDirectly(STAT, stat);
+    mmu->writeDirectly(STAT, stat);
     set_ly(0);
     return;
   }
@@ -101,7 +101,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
         u8 stat = get_stat();
         stat = setBit(stat, 0);
         stat = setBit(stat, 1);
-        mmu.writeDirectly(STAT, stat);
+        mmu->writeDirectly(STAT, stat);
       }
       break;
     case VRAM:
@@ -114,11 +114,11 @@ void PPU::step(u8 cpuCyclesElapsed) {
         u8 stat = get_stat();
         stat = clearBit(stat, 0);
         stat = clearBit(stat, 1);
-        mmu.writeDirectly(STAT, stat);
+        mmu->writeDirectly(STAT, stat);
 
         // HBLANK stat interrupt
         if (checkBit(get_stat(), 3)) {
-          cpu.requestInterrupt(Interrupt::LCD_STAT);
+          cpu->requestInterrupt(Interrupt::LCD_STAT);
         }
       }
       break;
@@ -128,7 +128,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
 
         // get and increment scanline
         u8 scanline = get_ly() + 1;
-        mmu.writeDirectly(LY, scanline);
+        mmu->writeDirectly(LY, scanline);
 
         // check lyc interupt
         checkLYC(scanline);
@@ -136,26 +136,26 @@ void PPU::step(u8 cpuCyclesElapsed) {
         // check current scanline >= 144, then enter VBLANK, else enter OAM to prepare to draw another line
         if (scanline >= 144) {
           mode = VBLANK;
-          cpu.requestInterrupt(VBLANK_INT); 
+          cpu->requestInterrupt(VBLANK_INT); 
           u8 stat = get_stat();
           stat = setBit(stat, 0);
           stat = clearBit(stat, 1);
-          mmu.writeDirectly(STAT, stat);
+          mmu->writeDirectly(STAT, stat);
 
           // VBLANK stat interrupt 
           if (checkBit(get_stat(), 4)) {
-            cpu.requestInterrupt(Interrupt::LCD_STAT);
+            cpu->requestInterrupt(Interrupt::LCD_STAT);
           }
         } else {
           mode = OAM;
           u8 stat = get_stat();
           stat = clearBit(stat, 0);
           stat = setBit(stat, 1);
-          mmu.writeDirectly(STAT, stat);
+          mmu->writeDirectly(STAT, stat);
 
           // OAM stat interrupt
           if (checkBit(get_stat(), 5)) {
-            cpu.requestInterrupt(Interrupt::LCD_STAT);
+            cpu->requestInterrupt(Interrupt::LCD_STAT);
           }
         }
       }
@@ -166,7 +166,7 @@ void PPU::step(u8 cpuCyclesElapsed) {
 
         // increment current line
         u8 scanline = get_ly() + 1;
-        mmu.writeDirectly(LY, scanline);
+        mmu->writeDirectly(LY, scanline);
 
         // check lyc interupt
         checkLYC(scanline);
@@ -175,17 +175,17 @@ void PPU::step(u8 cpuCyclesElapsed) {
         if (scanline >= 154) {
 
           // reset scanline to 0
-          mmu.writeDirectly(LY, 0);
+          mmu->writeDirectly(LY, 0);
           
           mode = OAM;
           u8 stat = get_stat();
           stat = clearBit(stat, 0);
           stat = setBit(stat, 1);
-          mmu.writeDirectly(STAT, stat);
+          mmu->writeDirectly(STAT, stat);
 
           // OAM stat interrupt
           if (checkBit(get_stat(), 5)) {
-            cpu.requestInterrupt(Interrupt::LCD_STAT);
+            cpu->requestInterrupt(Interrupt::LCD_STAT);
           }
         }
       }
@@ -202,12 +202,12 @@ void PPU::checkLYC(u8 scanline) {
 
     // LYC=LY stat interrupt
     if (checkBit(get_stat(), 6)) {
-      cpu.requestInterrupt(Interrupt::LCD_STAT);
+      cpu->requestInterrupt(Interrupt::LCD_STAT);
     }
   } else {
     stat = clearBit(stat, 2);
   }
-  mmu.writeDirectly(STAT, stat);
+  mmu->writeDirectly(STAT, stat);
 }
 
 // PPU mode typically goes from OAM -> VRAM -> HBLANK, repeating until VBLANK (aka mode 1)
@@ -282,9 +282,9 @@ void PPU::renderTiles() {
 
     s16 tileNum;
     if (unsig) {
-      tileNum = (u8)mmu.readDirectly(tileAddress);
+      tileNum = (u8)mmu->readDirectly(tileAddress);
     } else {
-      tileNum = (s8)mmu.readDirectly(tileAddress);
+      tileNum = (s8)mmu->readDirectly(tileAddress);
     }
 
     // adjust for unsigned by using 128 size offset
@@ -297,8 +297,8 @@ void PPU::renderTiles() {
 
      u8 line = yPos % 8;
      line *= 2; // two bytes of mem per line
-     u8 byte1 = mmu.readDirectly(tileLoc + line);
-     u8 byte2 = mmu.readDirectly(tileLoc + line + 1);
+     u8 byte1 = mmu->readDirectly(tileLoc + line);
+     u8 byte2 = mmu->readDirectly(tileLoc + line + 1);
 
      int colorBit = xPos % 8;
      colorBit -= 7;
@@ -328,7 +328,7 @@ void PPU::renderTiles() {
 }
 
 int PPU::getcolor(int id, u16 palette_address) {
-    u8 palette = mmu.readDirectly(palette_address);
+    u8 palette = mmu->readDirectly(palette_address);
     int hi = 2 * id + 1;
     int lo = 2 * id;
     int bit1 = (palette >> hi) & 1;
@@ -361,10 +361,10 @@ void PPU::renderSprites() {
   // can render up to 40 sprites, iterate through OAM table
   for (int i = 0; i < 40; i++) {
     u8 spriteIndex = i*4;
-    u8 yPos = mmu.readDirectly(OAM_TABLE + spriteIndex) - 16;
-    u8 xPos = mmu.readDirectly(OAM_TABLE + spriteIndex + 1) - 8;
-    u8 tileIndex = mmu.readDirectly(OAM_TABLE + spriteIndex + 2);
-    u8 attr = mmu.readDirectly(OAM_TABLE + spriteIndex + 3);
+    u8 yPos = mmu->readDirectly(OAM_TABLE + spriteIndex) - 16;
+    u8 xPos = mmu->readDirectly(OAM_TABLE + spriteIndex + 1) - 8;
+    u8 tileIndex = mmu->readDirectly(OAM_TABLE + spriteIndex + 2);
+    u8 attr = mmu->readDirectly(OAM_TABLE + spriteIndex + 3);
 
     // check sprite attributes
     //const bool bgOverObj = checkBit(attr, 7);
@@ -388,8 +388,8 @@ void PPU::renderSprites() {
       // 2 bytes of mem per line
       line *= 2;
       u16 sprite_addr = (0x8000 + (tileIndex * 16) + line);
-      u8 byte1 = mmu.readDirectly(sprite_addr);
-      u8 byte2 = mmu.readDirectly(sprite_addr + 1);
+      u8 byte1 = mmu->readDirectly(sprite_addr);
+      u8 byte2 = mmu->readDirectly(sprite_addr + 1);
 
       for (int k = 7; k >= 0; k--) {
         int position = k;

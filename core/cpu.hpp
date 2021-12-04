@@ -15,7 +15,7 @@ enum Interrupt {
 class CPU {
 public: 
   // At construction time, `exec` the boot rom
-  CPU(MMU& mmu);
+  CPU(MMU* mmu);
   
   // Ultimately, `step()` should return the number of cycles required to completely execute the op code
   // that we processed this step. But timing is not mission critical at the moment, so you can just 
@@ -34,7 +34,7 @@ public:
   void requestInterrupt(Interrupt interrupt);
   void acknowledgeInterrupt(Interrupt interrupt);
  private:
-  MMU mmu;
+  MMU* mmu;
   // Registers
 
   // Registers are sometimes combined into 16-bit registers. First register is the high-byte.

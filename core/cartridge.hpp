@@ -42,6 +42,8 @@ public:
 
   virtual u8 read(u16 address);
   virtual void write(u16 address, u8 value);
+
+  const char* getTitle();
 protected:
   u8* rom;
   u8* ram;
@@ -49,7 +51,7 @@ protected:
   CartridgeInfo cartridgeInfo;
 };
 
-Cartridge* createCartridge(u8* rom, CartridgeInfo cartridgeInfo);
+Cartridge* createCartridge(u8* rom);
 
 
 

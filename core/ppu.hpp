@@ -42,7 +42,7 @@ public:
   // During restricted modes, any attempt to read returns $FF, any attempt to write are ignored
   Mode mode;
 
-  PPU(MMU& mmu, CPU& cpu);
+  PPU(MMU* mmu, CPU* cpu);
 
   // Allow the PPU to cycle `cpuCyclesElapsed / 2` times per call
   void step(u8 cpuCyclesElapsed);
@@ -73,8 +73,8 @@ public:
   int getcolor(int id, u16 palette);
     
 private:
-  MMU mmu; 
-  CPU cpu;
+  MMU* mmu; 
+  CPU* cpu;
 
   unsigned int cyclesLeft;
 

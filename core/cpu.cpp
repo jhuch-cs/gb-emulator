@@ -11,7 +11,7 @@ const u8 half_carry_flag_index = 5;
 const u8 carry_flag_index = 4;
 
 
-CPU::CPU(MMU& mmu) : mmu(mmu) {   
+CPU::CPU(MMU* mmu) : mmu(mmu) {   
     //setting the pc to start where the boot rom is located
     this->pc = 0;
 
@@ -53,7 +53,7 @@ u8 CPU::handleInterrupts() {
 void CPU::requestInterrupt(Interrupt interrupt) {
     if (interrupt != NONE) {
         u8 bitIndex = static_cast<int>(interrupt);
-        mmu.write(IF_ADDRESS, setBit(mmu.read(IF_ADDRESS), bitIndex));
+        mmu->write(IF_ADDRESS, setBit(mmu->read(IF_ADDRESS), bitIndex));
     }
 }
 
@@ -61,7 +61,7 @@ void CPU::requestInterrupt(Interrupt interrupt) {
 void CPU::acknowledgeInterrupt(Interrupt interrupt) {
     if (interrupt != NONE) {
         u8 bitIndex = static_cast<int>(interrupt);
-        mmu.write(IF_ADDRESS, clearBit(mmu.read(IF_ADDRESS), bitIndex));
+        mmu->write(IF_ADDRESS, clearBit(mmu->read(IF_ADDRESS), bitIndex));
     }
 }
 
@@ -69,8 +69,8 @@ void CPU::acknowledgeInterrupt(Interrupt interrupt) {
 Interrupt CPU::checkInterrupts() {
     if (!ime) { return NONE; }
 
-    u8 interrupts_enabled = mmu.read(IE_ADDRESS);
-    u8 interrupts_flag = mmu.read(IF_ADDRESS);
+    u8 interrupts_enabled = mmu->read(IE_ADDRESS);
+    u8 interrupts_flag = mmu->read(IF_ADDRESS);
     u8 interrupts_requested = interrupts_enabled & interrupts_flag;
 
     if (interrupts_requested == 0) { return NONE; }
@@ -103,13 +103,13 @@ u8 CPU::exec(){
     // }
     // if (logMode) {
     //     printf("A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X ", getHighByte(af), getLowByte(af), getHighByte(bc), getLowByte(bc), getHighByte(de), getLowByte(de), getHighByte(hl), getLowByte(hl), sp, pc);
-    //     printf("(%02X %02X %02X %02X)\n", mmu.read(pc), mmu.read(pc + 1), mmu.read(pc + 2), mmu.read(pc + 3));
+    //     printf("(%02X %02X %02X %02X)\n", mmu->read(pc), mmu->read(pc + 1), mmu->read(pc + 2), mmu->read(pc + 3));
     // }
 
     //read code from wherever program counter is at
     //increment the program counter so next time we call it we get the next opCode
     //Anytime the program counter is used to read, it needs to be incremented, such as when reading input for an opCode
-    u8 opCode = mmu.read(pc++);
+    u8 opCode = mmu->read(pc++);
 
     //this is a default value for the cycles used.
     //In each op case, update number of cycles used so the correct number is returned at the end
@@ -128,7 +128,7 @@ u8 CPU::exec(){
         }
         case 0x20: {
             //JR NZ, r8 where r8 is signed
-            s8 nn = mmu.read(pc++); //always read r8 to consume entire op code
+            s8 nn = mmu->read(pc++); //always read r8 to consume entire op code
             if (!readZeroFlag()) {
                 pc += nn;
                 return 12;
@@ -137,7 +137,7 @@ u8 CPU::exec(){
         }
         case 0x30: {
             //JR NC, r8 where r8 is signed
-            s8 nn = mmu.read(pc++); //always read r8 to consume entire op code
+            s8 nn = mmu->read(pc++); //always read r8 to consume entire op code
             if (!readCarryFlag()) {
                 pc += nn;
                 return 12;
@@ -147,7 +147,7 @@ u8 CPU::exec(){
         case 0x01: case 0x11: case 0x21: case 0x31: {
             //LD rr,d16
             u16* rr = get16BitRegisterFromEncoding(getHighNibble(opCode));
-            u16 n = mmu.read16Bit(pc++);
+            u16 n = mmu->read16Bit(pc++);
             pc++; //Incremented twice on 16 bit read
             *rr = n;
             return 12;
@@ -156,19 +156,19 @@ u8 CPU::exec(){
             //LD (rr), A
             u16* rr = get16BitRegisterFromEncoding(getHighNibble(opCode));
             u8 a = getHighByte(af);
-            mmu.write(*rr, a);
+            mmu->write(*rr, a);
             return 8;
         }
         case 0x22: {
             //LD (HL+), A
             u8 a = getHighByte(af);
-            mmu.write(hl++, a);
+            mmu->write(hl++, a);
             return 8;
         }
         case 0x32: {
             //LD (HL-), A
             u8 a = getHighByte(af);
-            mmu.write(hl--, a);
+            mmu->write(hl--, a);
             return 8;
         }
         case 0x03: case 0x13: case 0x23: case 0x33: {
@@ -190,8 +190,8 @@ u8 CPU::exec(){
         }
         case 0x34: {
             //INC (HL)
-            u8 value = mmu.read(hl);
-            mmu.write(hl, ++value);
+            u8 value = mmu->read(hl);
+            mmu->write(hl, ++value);
 
             setHalfCarryFlag((value & 0x0F) == 0x00);
             setSubtractFlag(false);
@@ -212,8 +212,8 @@ u8 CPU::exec(){
         }
         case 0x35: {
             //DEC (HL)
-            u8 value = mmu.read(hl);
-            mmu.write(hl, --value);
+            u8 value = mmu->read(hl);
+            mmu->write(hl, --value);
 
             setHalfCarryFlag((value & 0x0F) == 0x0F);
             setSubtractFlag(true);
@@ -224,12 +224,12 @@ u8 CPU::exec(){
         case 0x06: case 0x16: case 0x26: {
             //LD r,d8
             u8* r = getRegisterFromEncoding(getHighNibble(opCode) * 2);
-            *r = mmu.read(pc++);
+            *r = mmu->read(pc++);
             return 8;
         } 
         case 0x36: {
             //LD (HL),d8
-            mmu.write(hl, mmu.read(pc++));
+            mmu->write(hl, mmu->read(pc++));
             return 12;
         }
         case 0x07: {
@@ -287,23 +287,23 @@ u8 CPU::exec(){
         }
         case 0x08: {
             //LD (a16),SP
-            u16 immediate_address = mmu.read16Bit(pc++);
+            u16 immediate_address = mmu->read16Bit(pc++);
             pc++;
-            mmu.write(immediate_address, getLowByte(sp));
-            mmu.write(immediate_address + 1, getHighByte(sp));
+            mmu->write(immediate_address, getLowByte(sp));
+            mmu->write(immediate_address + 1, getHighByte(sp));
 
             return 20;
         }
         case 0x18: {
             //JR r8 where r8 is signed
-            s8 nn = mmu.read(pc++);
+            s8 nn = mmu->read(pc++);
             pc += nn;
 
             return 12;
         }
         case 0x28: {
             //JR Z, r8 where r8 is signed
-            s8 nn = mmu.read(pc++); //always read r8 to consume entire op code
+            s8 nn = mmu->read(pc++); //always read r8 to consume entire op code
             if (readZeroFlag()) {
                 pc += nn;
                 return 12;
@@ -312,7 +312,7 @@ u8 CPU::exec(){
         }
         case 0x38: {
             //JR C, r8 where r8 is signed
-            s8 nn = mmu.read(pc++); //always read r8 to consume entire op code
+            s8 nn = mmu->read(pc++); //always read r8 to consume entire op code
             if (readCarryFlag()) {
                 pc += nn;
                 return 12;
@@ -336,19 +336,19 @@ u8 CPU::exec(){
         case 0x0A: case 0x1A: {
             //LD A, (rr)
             u16* rr = get16BitRegisterFromEncoding(getHighNibble(opCode));
-            u8 value = mmu.read(*rr);
+            u8 value = mmu->read(*rr);
             setHighByte(&af, value);
             return 8;
         }
         case 0x2A: {
             //LD A, (HL+)
-            u8 value = mmu.read(hl++);
+            u8 value = mmu->read(hl++);
             setHighByte(&af, value);
             return 8;
         }
         case 0x3A: {
             //LD A, (HL-)
-            u8 value = mmu.read(hl--);
+            u8 value = mmu->read(hl--);
             setHighByte(&af, value);
             return 8;
         }
@@ -383,7 +383,7 @@ u8 CPU::exec(){
         case 0x0E: case 0x1E: case 0x2E: case 0x3E: {
             //LD r, d8
             u8* r = getRegisterFromEncoding(getHighNibble(opCode) * 2 + 1);
-            u8 immediate_value = mmu.read(pc++);
+            u8 immediate_value = mmu->read(pc++);
             *r = immediate_value;
             return 8;
         }
@@ -418,7 +418,7 @@ u8 CPU::exec(){
         }
         case 0xFE: {
             //CP d8
-            u8 n = mmu.read(pc++);
+            u8 n = mmu->read(pc++);
             u8 a = getHighByte(af);
             op_cp(a, n);
 
@@ -426,7 +426,7 @@ u8 CPU::exec(){
         }
         case 0xE2: {
             //LD (C),A same as LD($FF00+C),A
-            mmu.write(getLowByte(bc) + 0xFF00, getHighByte(af));
+            mmu->write(getLowByte(bc) + 0xFF00, getHighByte(af));
             return 8;
         }
         case 0xC5: case 0xD5: case 0xE5: {
@@ -466,7 +466,7 @@ u8 CPU::exec(){
             //LD r1, (HL)
             u8 encodedRegister = (opCode - 0x40) / 8;
             u8* r1 = getRegisterFromEncoding(encodedRegister);
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             *r1 = value;
             
             return 8;
@@ -488,13 +488,13 @@ u8 CPU::exec(){
         case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x77: {
             //LD (HL), r1
             u8 *r1 = getRegisterFromEncoding(getLowNibble(opCode));
-            mmu.write(hl, *r1);
+            mmu->write(hl, *r1);
 
             return 8;
         }
         case 0x86: {
             //ADD A,(HL)
-            u8 value_at_hl = mmu.read(hl);
+            u8 value_at_hl = mmu->read(hl);
             u8 a = getHighByte(af);
             u8 result = op_add(a, value_at_hl);
             setHighByte(&af, result);
@@ -510,7 +510,7 @@ u8 CPU::exec(){
         }
         case 0x8E: {
             //ADC A, (HL)
-            u8 value_at_hl = mmu.read(hl);
+            u8 value_at_hl = mmu->read(hl);
             u8 a = getHighByte(af);
             u8 result = op_adc(a, value_at_hl);
             setHighByte(&af, result);
@@ -526,7 +526,7 @@ u8 CPU::exec(){
         }
         case 0x96: {
             //SUB (HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             u8 a = getHighByte(af);
             u8 result = op_sub(a, value);
             setHighByte(&af, result);
@@ -542,7 +542,7 @@ u8 CPU::exec(){
         }
         case 0x9E: {
             //SBC A,(HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             u8 a = getHighByte(af);
             u8 result = op_sbc(a, value);
             setHighByte(&af, result);
@@ -558,7 +558,7 @@ u8 CPU::exec(){
         }
         case 0xA6: {
             //AND (HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             u8 a = getHighByte(af);
             u8 result = op_and(a, value);
             setHighByte(&af, result);
@@ -574,7 +574,7 @@ u8 CPU::exec(){
         }
         case 0xAE: {
             //XOR (HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             u8 a = getHighByte(af);
             u8 result = op_xor(a, value);
             setHighByte(&af, result);
@@ -590,7 +590,7 @@ u8 CPU::exec(){
         }
         case 0xB6: {
             //OR (HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             u8 a = getHighByte(af);
             u8 result = op_or(a, value);
             setHighByte(&af, result);
@@ -606,7 +606,7 @@ u8 CPU::exec(){
         }
         case 0xBE: {
             //CP (HL)
-            u8 valueAtHL = mmu.read(hl);
+            u8 valueAtHL = mmu->read(hl);
             u8 a = getHighByte(af);
             op_cp(a, valueAtHL);
             return 8;
@@ -631,7 +631,7 @@ u8 CPU::exec(){
             //JP NZ, a16
 
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
-            u16 nn_nn = mmu.read16Bit(pc++);
+            u16 nn_nn = mmu->read16Bit(pc++);
             pc++;
 
             if (!readZeroFlag()) {
@@ -644,7 +644,7 @@ u8 CPU::exec(){
         case 0xC3: {
             //JP a16
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
-            u16 nn_nn = mmu.read16Bit(pc++);
+            u16 nn_nn = mmu->read16Bit(pc++);
             pc++;
             pc = nn_nn;
             return 16;
@@ -652,7 +652,7 @@ u8 CPU::exec(){
         case 0xC4: {
             //CALL NZ, a16
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
-            u16 nn_nn = mmu.read16Bit(pc++);
+            u16 nn_nn = mmu->read16Bit(pc++);
             pc++;
 
             if (!readZeroFlag()) {
@@ -665,7 +665,7 @@ u8 CPU::exec(){
         }
         case 0xC6: {
             //ADD A, d8
-            u8 n = mmu.read(pc++);
+            u8 n = mmu->read(pc++);
             u8 a = getHighByte(af);
             u8 result = op_add(a, n);
             setHighByte(&af, result);
@@ -697,7 +697,7 @@ u8 CPU::exec(){
         case 0xCA: {
             //JP Z, a16
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
-            u16 nn_nn = mmu.read16Bit(pc++);
+            u16 nn_nn = mmu->read16Bit(pc++);
             pc++;
 
             if (readZeroFlag()) {
@@ -716,7 +716,7 @@ u8 CPU::exec(){
             //check if zero flag is set
 
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
-            u16 nn_nn = mmu.read16Bit(pc++);
+            u16 nn_nn = mmu->read16Bit(pc++);
             pc++;
 
             if (readZeroFlag()) {
@@ -730,7 +730,7 @@ u8 CPU::exec(){
         }
         case 0xCD: {
             //CALL a16
-            u16 nn_nn = mmu.read16Bit(pc++);
+            u16 nn_nn = mmu->read16Bit(pc++);
             pc++;
             pushToStack(pc);
             pc = nn_nn;
@@ -738,7 +738,7 @@ u8 CPU::exec(){
         }
         case 0xCE: {
             //ADC A, d8
-            u8 n = mmu.read(pc++);
+            u8 n = mmu->read(pc++);
             u8 a = getHighByte(af);
             u8 result = op_adc(a, n);
             setHighByte(&af, result);
@@ -756,7 +756,7 @@ u8 CPU::exec(){
         case 0xD2: {
             //JP NC, a16
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
-            u16 nn_nn = mmu.read16Bit(pc++);
+            u16 nn_nn = mmu->read16Bit(pc++);
             pc++;
 
             if (!readCarryFlag()) {
@@ -769,7 +769,7 @@ u8 CPU::exec(){
         case 0xD4: {
             //CALL NC, a16
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
-            u16 nn_nn = mmu.read16Bit(pc++);
+            u16 nn_nn = mmu->read16Bit(pc++);
             pc++;
 
             if (!readCarryFlag()) {
@@ -783,7 +783,7 @@ u8 CPU::exec(){
         }
         case 0xD6: {
             //SUB d8
-            u8 n = mmu.read(pc++);
+            u8 n = mmu->read(pc++);
             u8 a = getHighByte(af);
             u8 result = op_sub(a, n);
             setHighByte(&af, result);
@@ -808,7 +808,7 @@ u8 CPU::exec(){
         case 0xDA: {
             //JP C, a16
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
-            u16 nn_nn = mmu.read16Bit(pc++);
+            u16 nn_nn = mmu->read16Bit(pc++);
             pc++;
 
             if (readCarryFlag()) {
@@ -823,7 +823,7 @@ u8 CPU::exec(){
             //check if carry flag is set and jump if so
 
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
-            u16 nn_nn = mmu.read16Bit(pc++);
+            u16 nn_nn = mmu->read16Bit(pc++);
             pc++;
 
             if (readCarryFlag()) {
@@ -837,7 +837,7 @@ u8 CPU::exec(){
         case 0xDE: {
             //SBC A, d8
             //A=A-n-cy
-            u8 value = mmu.read(pc++);
+            u8 value = mmu->read(pc++);
             u8 a = getHighByte(af);
             u8 result = op_sbc(a, value);
             setHighByte(&af, result);
@@ -845,13 +845,13 @@ u8 CPU::exec(){
         }
         case 0xE0: {
             //LDH (a8), A aka LD ($FF00+a8), A
-            u8 input = mmu.read(pc++);
-            mmu.write(0xFF00 + input, getHighByte(af));
+            u8 input = mmu->read(pc++);
+            mmu->write(0xFF00 + input, getHighByte(af));
             return 12;
         }
         case 0xE6: {
             //AND d8
-            u8 n = mmu.read(pc++);
+            u8 n = mmu->read(pc++);
             u8 a = getHighByte(af);
             setHighByte(&af, op_and(a, n));
             return 8;
@@ -859,7 +859,7 @@ u8 CPU::exec(){
         case 0xE8: {
             //ADD SP, r8 (16bit addition!)
             u16 old_sp = sp;
-            s8 num = mmu.read(pc++);
+            s8 num = mmu->read(pc++);
             sp = sp + num;
 
             setZeroFlag(false);
@@ -877,29 +877,29 @@ u8 CPU::exec(){
         }
         case 0xEA: {
             //LD (a16), A
-            u16 addressToWrite = mmu.read16Bit(pc++);
+            u16 addressToWrite = mmu->read16Bit(pc++);
             pc++;
 
-            mmu.write(addressToWrite, getHighByte(af));
+            mmu->write(addressToWrite, getHighByte(af));
             return 16;
         }
         case 0xEE: {
             //XOR d8
             //A=A xor n
-            u8 n = mmu.read(pc++);
+            u8 n = mmu->read(pc++);
             setHighByte(&af, op_xor(getHighByte(af), n));
             return 8;
         }
         case 0xF0: {
             //LDH A, (a8) aka LD A, ($FF00+a8)
-            u8 input = mmu.read(pc++);
-            setHighByte(&af, (mmu.read(0xFF00+input)));
+            u8 input = mmu->read(pc++);
+            setHighByte(&af, (mmu->read(0xFF00+input)));
             return 12;
         }
         case 0xF2: {
             //ld A,(FF00+C)
             u8 c = getLowByte(bc);
-            setHighByte(&af, (mmu.read(0xFF00+c)));
+            setHighByte(&af, (mmu->read(0xFF00+c)));
             return 8;
         }
         case 0xF3: {
@@ -909,7 +909,7 @@ u8 CPU::exec(){
         }
         case 0xF6: {
             //OR d8
-            u8 valueToOr = mmu.read(pc++);
+            u8 valueToOr = mmu->read(pc++);
 
             u8 a = getHighByte(af);
             a = op_or(a, valueToOr);
@@ -918,7 +918,7 @@ u8 CPU::exec(){
         }
         case 0xF8: {
             //LD HL, SP + r8, 16bit addition!
-            s8 num = mmu.read(pc++);
+            s8 num = mmu->read(pc++);
             hl = sp + num;
 
             setZeroFlag(false);
@@ -935,11 +935,11 @@ u8 CPU::exec(){
         case 0xFA: {
             //LD A, (a16)
             //PC NEEDS TO BE INCREMENTED TWICE ON 16 BIT READ
-            u16 address = mmu.read16Bit(pc++);
+            u16 address = mmu->read16Bit(pc++);
             pc++;
 
             u8 a = getHighByte(af);
-            a = mmu.read(address);
+            a = mmu->read(address);
             setHighByte(&af, a);
             return 16;
         }
@@ -959,13 +959,13 @@ u8 CPU::exec(){
 
 // Helpers
 u8 CPU::execCB() {
-    u8 opCode = mmu.read(pc++);
+    u8 opCode = mmu->read(pc++);
     switch (opCode) {
         case 0x06: {
             //RLC (HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             value = op_rlc(value);
-            mmu.write(hl, value);
+            mmu->write(hl, value);
             return 16;
         }
         case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x07: {
@@ -976,9 +976,9 @@ u8 CPU::execCB() {
         }
         case 0x0E: {
             //RRC (HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             value = op_rrc(value);
-            mmu.write(hl, value);
+            mmu->write(hl, value);
             return 16;
         }
         case 0x08: case 0x09: case 0x0A: case 0x0B: case 0x0C: case 0x0D: case 0x0F: {
@@ -989,9 +989,9 @@ u8 CPU::execCB() {
         }
         case 0x16: {
             //RL (HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             value = op_rl(value);
-            mmu.write(hl, value);
+            mmu->write(hl, value);
             return 16;
         }
         case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x17: {
@@ -1002,9 +1002,9 @@ u8 CPU::execCB() {
         }
         case 0x1E: {
             //RR (HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             value = op_rr(value);
-            mmu.write(hl, value);
+            mmu->write(hl, value);
             return 16;
         }
         case 0x18: case 0x19: case 0x1A: case 0x1B: case 0x1C: case 0x1D: case 0x1F: {
@@ -1015,10 +1015,10 @@ u8 CPU::execCB() {
         }
         case 0x26: {
             //SLA (HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             u8 high_bit = readBit(value, 7);
             value = (value << 1);
-            mmu.write(hl, value);
+            mmu->write(hl, value);
 
             setCarryFlag(high_bit);
             setHalfCarryFlag(false);
@@ -1040,11 +1040,11 @@ u8 CPU::execCB() {
         }
         case 0x2E: {
             //SRA (HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             u8 low_bit = readBit(value, 0);
             u8 high_bit = readBit(value, 7);
             value = (value >> 1) | (high_bit << 7);
-            mmu.write(hl, value);
+            mmu->write(hl, value);
 
             setCarryFlag(low_bit);
             setHalfCarryFlag(false);
@@ -1067,9 +1067,9 @@ u8 CPU::execCB() {
         }
         case 0x36: {
             //SWAP (HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             value = ((value & 0x0F) << 4 | (value & 0xF0) >> 4);
-            mmu.write(hl, value);
+            mmu->write(hl, value);
 
             setCarryFlag(false);
             setHalfCarryFlag(false);
@@ -1090,10 +1090,10 @@ u8 CPU::execCB() {
         }
         case 0x3E: {
             //SRL (HL)
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             u8 low_bit = readBit(value, 0);
             value = value >> 1;
-            mmu.write(hl, value);
+            mmu->write(hl, value);
 
             setCarryFlag(low_bit);
             setHalfCarryFlag(false);
@@ -1117,7 +1117,7 @@ u8 CPU::execCB() {
         case 0x66: case 0x6E: case 0x76: case 0x7E: {
             //BIT n, (HL)
             u8 index = (opCode - 0x40) / 8;
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
 
             setHalfCarryFlag(true);
             setSubtractFlag(false);
@@ -1145,9 +1145,9 @@ u8 CPU::execCB() {
         case 0xA6: case 0xAE: case 0xB6: case 0xBE: {
             //RES n, (HL)
             u8 index = (opCode - 0x80) / 8;
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             value = clearBit(value, index);
-            mmu.write(hl, value);
+            mmu->write(hl, value);
             return 16;
         }
         case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x87:
@@ -1168,9 +1168,9 @@ u8 CPU::execCB() {
         case 0xE6: case 0xEE: case 0xF6: case 0xFE: {
             //SET n, (HL)
             u8 index = (opCode - 0xC0) / 8;
-            u8 value = mmu.read(hl);
+            u8 value = mmu->read(hl);
             value = setBit(value, index);
-            mmu.write(hl, value);
+            mmu->write(hl, value);
             return 16;
         }
         case 0xC0: case 0xC1: case 0xC2: case 0xC3: case 0xC4: case 0xC5: case 0xC7:
@@ -1318,12 +1318,12 @@ u8 CPU::op_rr(u8 reg) {
 }
 
 void CPU::pushToStack(u16 value) {
-    mmu.write(--sp, getHighByte(value));
-    mmu.write(--sp, getLowByte(value));
+    mmu->write(--sp, getHighByte(value));
+    mmu->write(--sp, getLowByte(value));
 }
 
 u16 CPU::popFromStack() {
-    u16 value = mmu.read16Bit(sp);
+    u16 value = mmu->read16Bit(sp);
     sp += 2;
     return value;
 }
