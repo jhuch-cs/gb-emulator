@@ -113,15 +113,15 @@ void MMU::write(u16 address, u8 value, bool isPPU) {
         wramBank = value & 0x07; //only bottom 3 bits
         if (!wramBank) { wramBank++; } //can't be zero
     } else if (supportsCGB && address == VALUE_BG_CRAM) { 
+        bg_cram[memory[ADDRESS_BG_CRAM] & 0x3F] = value;
         if (memory[ADDRESS_BG_CRAM] & 0b10000000) {
             memory[ADDRESS_BG_CRAM]++; //FIXME: Does this wrap at bit 5 or 7?
         }
-        bg_cram[memory[ADDRESS_BG_CRAM] & 0x3F] = value;
     } else if (supportsCGB && address == VALUE_OBJ_CRAM) { 
+        obj_cram[memory[ADDRESS_OBJ_CRAM] & 0x3F] = value;
         if (memory[ADDRESS_OBJ_CRAM] & 0b10000000) {
             memory[ADDRESS_OBJ_CRAM]++; //FIXME: Does this wrap at bit 5 or 7?
         }
-        obj_cram[memory[ADDRESS_OBJ_CRAM] & 0x3F] = value;
     } else if (supportsCGB && address == HDMA5_OPTS) {
         memory[HDMA5_OPTS] = value;
         if (value & 0b10000000) {
