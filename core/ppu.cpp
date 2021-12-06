@@ -242,45 +242,66 @@ void PPU::renderTiles() {
   u16 tileData = tileDataArea();
   bool unsig = checkBit(get_lcdc(), 4);
 
-  u8 currentLine = get_ly();
+  u8 y = get_ly();
 
-  u8* pixelStartOfRow = frameBuffer + (LCD_WIDTH * 3 * currentLine);
+  u8* pixelStartOfRow = frameBuffer + (LCD_WIDTH * 3 * y);
 
-  u8 *bgwin_tiledata_0 = &mmu->vram[0][tileDataArea() - VRAM_START];
-  u8 *bgwin_tiledata_1 = &mmu->vram[1][tileDataArea() - VRAM_START];
-  u8 *obj_tiledata = &mmu->vram[0][0];
-  u8 *bgmap_0 = &mmu->vram[0][bgTileMapArea() - VRAM_START];
-  u8 *bgmap_1 = &mmu->vram[1][bgTileMapArea() - VRAM_START];
-  u8 *winmap_0 = &mmu->vram[0][windowTileMapArea() - VRAM_START];
-  u8 *winmap_1 = &mmu->vram[1][windowTileMapArea() - VRAM_START];
+  u8 winmap_high       = (mmu->readDirectly(LCDC) & (1<<6)) ? 1 : 0;
+  u8 win_enable        = (mmu->readDirectly(LCDC) & (1<<5)) ? 1 : 0;
+  u8 bgwin_tilemap_low = (mmu->readDirectly(LCDC) & (1<<4)) ? 1 : 0;
+  u8 bgmap_high        = (mmu->readDirectly(LCDC) & (1<<3)) ? 1 : 0;
+  u8 obj_8x16          = (mmu->readDirectly(LCDC) & (1<<2)) ? 1 : 0;
+  u8 obj_enable        = (mmu->readDirectly(LCDC) & (1<<1)) ? 1 : 0;
+  u8 bg_enable         = (mmu->readDirectly(LCDC) & (1<<0)) ? 1 : 0;
+  u8 bgwin_tilemap_unsigned = bgwin_tilemap_low;
+
+  u16 bgwin_tilemap_addr = bgwin_tilemap_low ? 0x8000 : 0x9000;
+  u16 bgmap_addr = bgmap_high ? 0x9c00 : 0x9800;
+  u16 winmap_addr = winmap_high ? 0x9c00 : 0x9800;
+  u16 obj_tiledata_addr = 0x8000;
+  u16 vram_addr = 0x8000;
+
+  u8 *bgwin_tiledata = &mmu->vram[0][bgwin_tilemap_addr - vram_addr];
+  u8 *obj_tiledata = &mmu->vram[0][obj_tiledata_addr - vram_addr];
+  u8 *bgmap = &mmu->vram[0][bgmap_addr - vram_addr];
+  u8 *winmap = &mmu->vram[0][winmap_addr - vram_addr];
+
+  u8 bg_scroll_x = get_scx();
+  u8 bg_scroll_y = get_scy();
+  u8 win_pos_x = get_wx();
+  u8 win_pos_y = get_wy();
 
   // draw current line of pixels
   if (supportsCGB) {
     if (isBgWinEnabled()) {
-      for (int i = 0; i < LCD_WIDTH; i++) {
-        int xBg = (i + scrollX) % 256;
-        int yBg = (currentLine + scrollY) % 256;
+      for (int x = 0; x < LCD_WIDTH; x++) {
+        int xBg = (x + scrollX) % 256;
+        int yBg = (y + scrollY) % 256;
 
         int tileX = xBg / 8;
         int tileY = yBg / 8;
 
         int idBg = tileX + tileY * 32;
+        if (idBg == 0x88) {
+          int x = 0;
+        }
         int tileOffsetX = xBg % 8;
         int tileOffsetY = yBg % 8;
 
-        u8 tileIdRaw = bgmap_0[idBg];
-        s16 tileId = unsig ? (s16)(u16)tileIdRaw : (s16)(s8)tileIdRaw;
+        u8 tile_idx_raw = bgmap[idBg];
+        s8 tile_idx = unsig ? (u8)tile_idx_raw : (s8)tile_idx_raw;
 
-        u8 tileAttr = bgmap_1[idBg];
+        u8 tileAttr = bgmap[idBg + 0x2000];
 
-        u8 vramBank = tileAttr & 0b00001000;
+        u8 vramBank = (tileAttr & (1<<3)) ? 1 : 0;
 
-        int tileOffsetBg = tileOffsetX + tileOffsetY * 8;
-        int shift = 7 - tileOffsetBg % 8;
-        int tileDataOffset = tileId * 16 + tileOffsetBg/8*2;
+        int bg_tileoff = tileOffsetX + tileOffsetY * 8;
+        int shift = 7 - bg_tileoff % 8;
+        int tiledata_off = tile_idx * 16 + bg_tileoff/8*2;
+        if (vramBank) { tiledata_off += 0x2000; }
 
-        u8 byte1 = vramBank ? bgwin_tiledata_1[tileDataOffset]     : bgwin_tiledata_0[tileDataOffset];
-        u8 byte2 = vramBank ? bgwin_tiledata_1[tileDataOffset + 1] : bgwin_tiledata_0[tileDataOffset + 1];
+        u8 byte1 = bgwin_tiledata[tiledata_off];
+        u8 byte2 = bgwin_tiledata[tiledata_off + 1];
 
         int colorId = ((byte1 >> shift) & 0b1) | (((byte2 >> shift) & 0b1) << 1);
 
@@ -288,7 +309,7 @@ void PPU::renderTiles() {
         u16 raw_color = (mmu->bg_cram[paletteNumber * 8 + colorId * 2 + 1] << 8) | mmu->bg_cram[paletteNumber * 8 + colorId * 2];
 
         // convert from 5 bit color to 8 bit color
-        u8* pixelStartLocation = pixelStartOfRow + 3 * i;
+        u8* pixelStartLocation = pixelStartOfRow + 3 * x;
         pixelStartLocation[0] = ((raw_color)       & 0x1F) << 3;
         pixelStartLocation[1] = ((raw_color >> 5)  & 0x1F) << 3;
         pixelStartLocation[2] = ((raw_color >> 10) & 0x1F) << 3;
@@ -302,28 +323,28 @@ void PPU::renderTiles() {
       }
     }
     if (isWindowEnabled()) {
-      for (int i = 0; i < LCD_WIDTH; i++) {
-        int xWin = (i - windowX) + 7;
-        int yWin = (currentLine - windowY);
+      for (int x = 0; x < LCD_WIDTH; x++) {
+        int win_x = (x - windowX);
+        int win_y = (y - windowY);
 
-        int tileX = xWin / 8;
-        int tileY = yWin / 8;
+        int tile_x = win_x / 8;
+        int tile_y = win_y / 8;
 
-        int tileOffsetX = xWin % 8;
-        int tileOffsetY = yWin % 8;
+        int tileoff_x = win_x % 8;
+        int tileoff_y = win_y % 8;
 
-        if (xWin < 0 || yWin < 0) { // outside of window
+        if (win_x < 0 || win_y < 0) { // outside of window
           continue; 
         }
 
-        u8 tileIdRaw = winmap_0[tileX + tileY * 32];
-        s16 tileId = unsig ? (s16)(u16)tileIdRaw : (s16)(s8)tileIdRaw;
+        u8 tile_idx_raw = winmap[tile_x + tile_y * 32];
+        s8 tileId = unsig ? (u8)tile_idx_raw : (s8)tile_idx_raw;
 
-        int tileOffset = tileOffsetX + tileOffsetY * 8;
-        int shift = 7 - tileOffset % 8;
+        int tileOff = tileoff_x + tileoff_y * 8;
+        int shift = 7 - tileOff % 8;
 
-        u8 byte1 = bgwin_tiledata_0[tileId * 16 + tileOffset / 8 * 2];
-        u8 byte2 = bgwin_tiledata_0[tileId * 16 + tileOffset / 8 * 2 + 1];
+        u8 byte1 = bgwin_tiledata[tileId * 16 + tileOff / 8 * 2];
+        u8 byte2 = bgwin_tiledata[tileId * 16 + tileOff / 8 * 2 + 1];
         
         int colorId = ((byte1 >> shift) & 0b1) | (((byte2 >> shift) & 0b1) << 1);
 
@@ -331,7 +352,7 @@ void PPU::renderTiles() {
         u16 raw_color = (mmu->bg_cram[paletteNumber * 8 + colorId * 2 + 1] << 8) | mmu->bg_cram[paletteNumber * 8 + colorId * 2];
 
         // convert from 5 bit color to 8 bit color
-        u8* pixelStartLocation = pixelStartOfRow + 3 * i;
+        u8* pixelStartLocation = pixelStartOfRow + 3 * x;
         pixelStartLocation[0] = ((raw_color)       & 0x1F) << 3;
         pixelStartLocation[1] = ((raw_color >> 5)  & 0x1F) << 3;
         pixelStartLocation[2] = ((raw_color >> 10) & 0x1F) << 3;
@@ -342,7 +363,7 @@ void PPU::renderTiles() {
     // Check if window's Y position is within the current scanline and window is enabled
     // Tetris doesn't use a window, so this should be just set to the bgTileMapAreaa()
     u16 tileMap;
-    bool winEnabled = (isWindowEnabled() && windowY <= currentLine);
+    bool winEnabled = (isWindowEnabled() && windowY <= y);
     if (!winEnabled) {
       tileMap = bgTileMapArea();
     } else {
@@ -352,9 +373,9 @@ void PPU::renderTiles() {
     // calculate current row of tiles we are on
     u8 yPos = 0;
     if (!winEnabled) {
-      yPos = scrollY + currentLine;
+      yPos = scrollY + y;
     } else {
-      yPos = currentLine - windowY;
+      yPos = y - windowY;
     }
 
     // calculate which row of pixels in the above tile we are on (32 tiles vertical, 8 pixels per tile)

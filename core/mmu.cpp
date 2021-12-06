@@ -105,7 +105,9 @@ void MMU::write(u16 address, u8 value, bool isPPU) {
         }
     } else if (address == DMA_TRSFR_ADDRESS) { // DMA transfer
         u16 startAddress = value << 8;
-        memcpy(memory + 0xFE00, memory + startAddress, 160);
+        for (int i = 0; i < 160; i++) {
+            memory[0xFE00 + i] = read(startAddress + i);
+        }
         memory[address] = value;
     } else if (supportsCGB && address == VRAM_BANK) {
         vramBank = value & 0b1; //Only bit 0 matters, all other bits are ignored.
