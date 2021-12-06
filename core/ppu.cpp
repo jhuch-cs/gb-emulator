@@ -360,7 +360,7 @@ void PPU::renderSprites() {
     u8 attr = mmu->readDirectly(OAM_TABLE + spriteIndex + 3);
 
     // check sprite attributes
-    //const bool bgOverObj = checkBit(attr, 7);
+    const bool bgOverObj = checkBit(attr, 7);
     const bool yFlip = checkBit(attr, 6);
     const bool xFlip = checkBit(attr, 5);
     const u16 pallete = checkBit(attr, 4) ? OBP1 : OBP0;
@@ -410,6 +410,12 @@ void PPU::renderSprites() {
           int pixel = xPos + xPixel;
         
           u8* pixelStartLocation = pixelStartOfRow + 3 * pixel;
+          if (bgOverObj) {
+            if (!(pixelStartLocation[0] == palette[0][0] && pixelStartLocation[1] == palette[0][1] && pixelStartLocation[2] == palette[0][2])) { 
+              continue; 
+            }
+          }
+
           pixelStartLocation[0] = palette[color][0];
           pixelStartLocation[1] = palette[color][1];
           pixelStartLocation[2] = palette[color][2];
