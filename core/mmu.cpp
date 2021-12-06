@@ -106,7 +106,7 @@ void MMU::write(u16 address, u8 value, bool isPPU) {
     } else if (address == DMA_TRSFR_ADDRESS) { // DMA transfer
         u16 startAddress = value << 8;
         for (int i = 0; i < 160; i++) {
-            memory[0xFE00 + i] = read(startAddress + i);
+            memory[0xFE00 + i] = read(startAddress + i, true);
         }
         memory[address] = value;
     } else if (supportsCGB && address == VRAM_BANK) {
@@ -117,12 +117,12 @@ void MMU::write(u16 address, u8 value, bool isPPU) {
     } else if (supportsCGB && address == VALUE_BG_CRAM) { 
         bg_cram[memory[ADDRESS_BG_CRAM] & 0x3F] = value;
         if (memory[ADDRESS_BG_CRAM] & 0b10000000) {
-            memory[ADDRESS_BG_CRAM]++; //FIXME: Does this wrap at bit 5 or 7?
+            memory[ADDRESS_BG_CRAM] = (((memory[ADDRESS_BG_CRAM] & 0x3f) + 1) & 0x3f) | (1 << 7);
         }
     } else if (supportsCGB && address == VALUE_OBJ_CRAM) { 
         obj_cram[memory[ADDRESS_OBJ_CRAM] & 0x3F] = value;
         if (memory[ADDRESS_OBJ_CRAM] & 0b10000000) {
-            memory[ADDRESS_OBJ_CRAM]++; //FIXME: Does this wrap at bit 5 or 7?
+            memory[ADDRESS_OBJ_CRAM] = (((memory[ADDRESS_OBJ_CRAM] & 0x3f) + 1) & 0x3f) | (1 << 7);
         }
     } else if (supportsCGB && address == HDMA5_OPTS) {
         memory[HDMA5_OPTS] = value;
@@ -159,7 +159,7 @@ void MMU::doGDMA() {
     length = (length / 0x10) - 1; // divided by 10h, minus 1
 
     for (u16 i = 0; i < length; i++) {
-        write(dest++, read(source++));
+        write(dest++, read(source++, true), true);
     }
 
     memory[HDMA5_OPTS] = 0xFF;

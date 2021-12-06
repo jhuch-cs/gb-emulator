@@ -282,9 +282,6 @@ void PPU::renderTiles() {
         int tileY = yBg / 8;
 
         int idBg = tileX + tileY * 32;
-        if (idBg == 0x88) {
-          int x = 0;
-        }
         int tileOffsetX = xBg % 8;
         int tileOffsetY = yBg % 8;
 
@@ -524,24 +521,39 @@ void PPU::renderSprites() {
         int color = getcolor(colorId, pallete);
 
         if (colorId != 0) { // pixels with color index 0 (aka white) should be not rendered on sprites
-
           int xPixel = 7 - k;
           int pixel = xPos + xPixel;
-  
-          u8 red = 0;
-          u8 green = 0;
-          u8 blue = 0;
-          switch(color) {
-            case 0: red = 155; green = 188 ; blue = 15; break;   // WHITE = 0  #9bbc0f RGB: 155, 188, 15
-            case 1:red = 139; green = 172 ; blue = 15; break;    // LIGHT_GRAY = 1 #8bac0f RGB: 139, 172, 15
-            case 2: red = 48; green = 98 ; blue = 48; break;     // DARK_GRAY = 2  #306230 RGB: 48, 98, 48
-            default: red = 15; green = 56; blue = 15; break;     // BLACK = 3  #0f380f RGB: 15, 56, 15
-          }
-        
+
           u8* pixelStartLocation = pixelStartOfRow + 3 * pixel;
-          pixelStartLocation[0] = red;
-          pixelStartLocation[1] = green;
-          pixelStartLocation[2] = blue;
+
+          if (checkBit(attr, 7)) { // background has priority over sprites
+            if (pixelStartLocation[0] == 0 || pixelStartLocation[1] == 0 || pixelStartLocation[2] == 0) {
+                continue;
+            }
+          }
+
+          if (supportsCGB) {
+            u8 paletteNumber = attr & 0b111;
+            u16 raw_color = (mmu->obj_cram[paletteNumber * 8 + colorId * 2 + 1] << 8) | mmu->obj_cram[paletteNumber * 8 + colorId * 2];
+
+            // convert from 5 bit color to 8 bit color
+            pixelStartLocation[0] = ((raw_color)       & 0x1F) << 3;
+            pixelStartLocation[1] = ((raw_color >> 5)  & 0x1F) << 3;
+            pixelStartLocation[2] = ((raw_color >> 10) & 0x1F) << 3;
+          } else {
+            u8 red = 0;
+            u8 green = 0;
+            u8 blue = 0;
+            switch(color) {
+              case 0: red = 155; green = 188 ; blue = 15; break;   // WHITE = 0  #9bbc0f RGB: 155, 188, 15
+              case 1:red = 139; green = 172 ; blue = 15; break;    // LIGHT_GRAY = 1 #8bac0f RGB: 139, 172, 15
+              case 2: red = 48; green = 98 ; blue = 48; break;     // DARK_GRAY = 2  #306230 RGB: 48, 98, 48
+              default: red = 15; green = 56; blue = 15; break;     // BLACK = 3  #0f380f RGB: 15, 56, 15
+            }
+            pixelStartLocation[0] = red;
+            pixelStartLocation[1] = green;
+            pixelStartLocation[2] = blue;
+          }
         }
       }
     }
