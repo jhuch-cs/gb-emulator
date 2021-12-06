@@ -97,14 +97,16 @@ inline u16 CPU::getInterruptVector(Interrupt interrupt) {
 }
 
 u8 CPU::exec(){
-    // if (pc == 0x100) { 
-    //     logMode = true; 
-    //     std::freopen("output.txt","w",stdout);
-    // }
-    // if (logMode) {
-    //     printf("A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X ", getHighByte(af), getLowByte(af), getHighByte(bc), getLowByte(bc), getHighByte(de), getLowByte(de), getHighByte(hl), getLowByte(hl), sp, pc);
-    //     printf("(%02X %02X %02X %02X)\n", mmu->read(pc), mmu->read(pc + 1), mmu->read(pc + 2), mmu->read(pc + 3));
-    // }
+    #ifdef LOG
+    if (pc == 0x100) { 
+        logMode = true; 
+        std::freopen("output.txt","w",stdout);
+    }
+    if (logMode) {
+        printf("A: %02X F: %02X B: %02X C: %02X D: %02X E: %02X H: %02X L: %02X SP: %04X PC: 00:%04X ", getHighByte(af), getLowByte(af), getHighByte(bc), getLowByte(bc), getHighByte(de), getLowByte(de), getHighByte(hl), getLowByte(hl), sp, pc);
+        printf("(%02X %02X %02X %02X)\n", mmu->read(pc), mmu->read(pc + 1), mmu->read(pc + 2), mmu->read(pc + 3));
+    }
+    #endif
 
     //read code from wherever program counter is at
     //increment the program counter so next time we call it we get the next opCode
