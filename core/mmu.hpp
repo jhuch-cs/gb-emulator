@@ -16,6 +16,12 @@ const u16 SB_ADDRESS = 0xFF01;
 const u16 SC_ADDRESS = 0xFF02;
 const u16 STAT_ADDRESS = 0xFF41;
 const u16 DMA_TRSFR_ADDRESS = 0xFF46;
+const u16 ECHO_BEGIN = 0xE000;
+const u16 ECHO_END = 0xFDFF;
+const u16 VRAM_BEGIN = 0x8000;
+const u16 VRAM_END = 0x9FFF;
+const u16 OAM_BEGIN = 0xFE00;
+const u16 OAM_END = 0xFE9F;
 
 class MMU {
 public: 
