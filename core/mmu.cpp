@@ -4,7 +4,7 @@
 #include "./mmu.hpp"
 
 bool checkAddressIsValid(u16 address) {
-    return address >= 0x0000 && address <= 0xffff;
+    return address >= 0x0000 && address <= 0xffff && (address <= ECHO_BEGIN || address >= ECHO_END);
 }
 
 MMU::MMU(Cartridge* cartridge, Input* input, u8* bootRom) : cartridge(cartridge), input(input), bootRom(bootRom) {
@@ -24,11 +24,11 @@ bool MMU::blockedByPPU(u16 address) {
     stat &= 0x3;
     // OAM
     if (stat == 2) {
-        return (address >= 0xFE00 && address <= 0xFE9F);
+        return (address >= OAM_BEGIN && address <= OAM_END);
     }
     // VRAM
     if (stat == 3) {
-        return (address >= 0xFE00 && address <= 0xFE9F) || (address >= 0x8000 && address <= 0x97FF);
+        return (address >= OAM_BEGIN && address <= OAM_END) || (address >= VRAM_BEGIN && address <= VRAM_END);
     }
     return false;
 }
