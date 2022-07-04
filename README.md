@@ -1,6 +1,6 @@
 # gb-emulator
 
-A Gameboy emulator implemented in C++ and with SDL2 for rendering. In addition to basic functionality, multiple cartridge types and palette switching are also implemented. Not implemented is audo supported and Gameboy Color functionality.
+A Gameboy emulator implemented in C++ and with SDL2 for rendering. In addition to basic functionality, multiple cartridge types and palette switching are also implemented. Not implemented is audio and Gameboy Color functionality.
 
 ## What's What
 
